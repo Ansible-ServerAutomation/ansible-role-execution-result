@@ -68,14 +68,6 @@
     - execution_result_log_enabled | bool
     - ansible_os_family != 'Windows'
 
-- name: Ensure log directory exists (Windows)
-  ansible.windows.win_file:
-    path: "{{ execution_result_log_dir }}"
-    state: directory
-  when:
-    - execution_result_log_enabled | bool
-    - ansible_os_family == 'Windows'
-
 - name: Write execution result to log file (Linux)
   ansible.builtin.lineinfile:
     path: "{{ execution_result_log_file }}"
@@ -86,11 +78,8 @@
     - execution_result_log_enabled | bool
     - ansible_os_family != 'Windows'
 
-- name: Write execution result to log file (Windows)
-  ansible.windows.win_lineinfile:
-    path: "{{ execution_result_log_file }}"
-    line: "{{ lookup('template', 'execution_result_entry.j2') | trim }}"
-    create: true
+- name: Windows logging tasks
+  ansible.builtin.include_tasks: logging_windows.yml
   when:
     - execution_result_log_enabled | bool
     - ansible_os_family == 'Windows'
