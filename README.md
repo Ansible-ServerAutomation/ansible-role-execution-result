@@ -79,7 +79,10 @@ Override these in your playbook or inventory to control role behaviour:
         execution_result_return_code: "{{ primary_task_result.rc | default(1) }}"
         execution_result_message: "{{ primary_task_result.stderr | default('Unknown error') }}"
         execution_result_failed_task: "Run the primary task"
+        execution_result_warnings: "{{ primary_task_result.warnings | default([]) }}"
 ```
+
+**Important:** To capture warnings, you **must** use `register:` on the task you want to track, then pass `task_result.warnings` to `execution_result_warnings`. Warnings are only available in registered task results.
 
 ### Accessing accumulated results later
 
@@ -114,6 +117,25 @@ When `execution_result_set_stats_enabled: true` (the default) and `execution_res
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
 The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.
+
+---
+
+## Limitations
+
+### Warning Capture
+
+The role captures **task-level warnings** that appear in the `warnings` key of registered task results. Examples include:
+
+- Python interpreter discovery warnings
+- Module-specific warnings (deprecated parameters, etc.)
+- Warnings returned by modules like `apt`, `yum`, `win_package`, etc.
+
+**NOT captured:**
+- Play-level warnings shown before/after play execution (e.g., `[DEPRECATION WARNING]: ANSIBLE_COLLECTIONS_PATHS...`)
+- Ansible configuration warnings
+- Inventory warnings
+
+These play-level warnings are emitted by Ansible core and are not part of task results. To capture them, you would need a custom callback plugin.
 
 ---
 

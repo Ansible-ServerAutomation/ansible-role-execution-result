@@ -1,0 +1,69 @@
+---
+# Example: Capturing warnings from tasks
+# This example shows how to properly capture task-level warnings
+# that appear during task execution (like Python interpreter warnings).
+
+- name: Example play capturing warnings
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    # Example 1: Capture warnings from a ping task
+    - name: Ping the managed host
+      ansible.builtin.ping:
+      register: ping_result
+
+    - name: Record ping execution result with warnings
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        execution_result_return_code: 0
+        execution_result_message: "Ping successful"
+        execution_result_warnings: "{{ ping_result.warnings | default([]) }}"
+        execution_result_failed_task: ""
+
+    # Example 2: Using block/rescue to capture warnings on success or failure
+    - name: Run task that might generate warnings
+      block:
+        - name: Execute a command
+          ansible.builtin.shell: |
+            echo "Running task"
+            exit 0
+          register: task_result
+          changed_when: false
+
+      rescue:
+        - name: Record failure with warnings
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            execution_result_return_code: "{{ task_result.rc | default(1) }}"
+            execution_result_stdout: "{{ task_result.stdout | default('') }}"
+            execution_result_stderr: "{{ task_result.stderr | default('') }}"
+            execution_result_message: "Task failed"
+            execution_result_warnings: "{{ task_result.warnings | default([]) }}"
+            execution_result_exception: "{{ ansible_failed_result.msg | default('') }}"
+            execution_result_failed_task: "{{ ansible_failed_task.name }}"
+
+      always:
+        - name: Record success with warnings
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            execution_result_return_code: "{{ task_result.rc | default(0) }}"
+            execution_result_stdout: "{{ task_result.stdout | default('') }}"
+            execution_result_stderr: "{{ task_result.stderr | default('') }}"
+            execution_result_message: "Task completed"
+            execution_result_warnings: "{{ task_result.warnings | default([]) }}"
+            execution_result_failed_task: ""
+          when: task_result.rc | default(0) == 0
+
+# The warnings field will capture task-level warnings such as:
+# - [WARNING]: Platform linux on host X is using the discovered Python interpreter...
+# - Module deprecation warnings
+# - Package manager warnings
+#
+# Note: Play-level warnings (shown before the play starts) cannot be captured
+# as they are not part of task results. Examples include:
+# - [DEPRECATION WARNING]: ANSIBLE_COLLECTIONS_PATHS option...
+# - Ansible configuration warnings
