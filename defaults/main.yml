@@ -32,4 +32,4 @@ execution_result_fail_on_error: false
 # When true, the role publishes execution results to the AWX/Tower job Artifacts section
 execution_result_set_stats_enabled: true
 # When true, results are stored per-host in addition to the aggregated artifact
-execution_result_set_stats_per_host: false
+execution_result_set_stats_per_host: true

@@ -35,7 +35,7 @@
       stderr: "{{ _execution_result_stderr }}"
       message: "{{ _execution_result_message }}"
       exception: "{{ _execution_result_exception }}"
-      failed_task: "{{ execution_result_failed_task | default('') | trim or 'N/A' }}"
+      failed_task: "{{ execution_result_failed_task | default(ansible_failed_task.name | default('N/A')) | trim }}"
 
 - name: Accumulate execution results
   ansible.builtin.set_fact:
@@ -110,7 +110,7 @@
   ansible.builtin.fail:
     msg: >-
       Execution result role triggered a play failure.
-      Task '{{ execution_result_failed_task | default('unknown') }}' reported
+      Task '{{ execution_result_failed_task | default(ansible_failed_task.name | default('N/A')) }}' reported
       return code {{ execution_result_return_code }}: {{ execution_result_message }}
   when:
     - execution_result_fail_on_error | bool
