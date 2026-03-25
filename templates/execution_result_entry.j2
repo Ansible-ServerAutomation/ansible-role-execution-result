@@ -12,4 +12,10 @@ Stderr      :
   {{ _execution_result_entry.stderr | indent(2) }}
 Exception   :
   {{ _execution_result_entry.exception | indent(2) }}
+{% if _execution_result_entry.warnings | length > 0 %}
+Warnings    :
+{% for warning in _execution_result_entry.warnings %}
+  [{{ loop.index }}] {{ warning }}
+{% endfor %}
+{% endif %}
 ---

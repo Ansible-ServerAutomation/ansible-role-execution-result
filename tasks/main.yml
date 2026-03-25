@@ -23,6 +23,7 @@
     _execution_result_stderr: "{{ execution_result_stderr | default('') | trim or '(none)' }}"
     _execution_result_message: "{{ execution_result_message | default('') | trim or '(none)' }}"
     _execution_result_exception: "{{ execution_result_exception | default('') | trim or '(none)' }}"
+    _execution_result_warnings: "{{ execution_result_warnings | default([]) }}"
 
 - name: Build result entry
   ansible.builtin.set_fact:
@@ -35,6 +36,7 @@
       stderr: "{{ _execution_result_stderr }}"
       message: "{{ _execution_result_message }}"
       exception: "{{ _execution_result_exception }}"
+      warnings: "{{ _execution_result_warnings }}"
       failed_task: "{{ execution_result_failed_task | default(ansible_failed_task.name | default('N/A')) | trim }}"
 
 - name: Accumulate execution results
@@ -100,6 +102,12 @@
       │   {{ _execution_result_entry.stderr | indent(4) }}
       │ Exception   :
       │   {{ _execution_result_entry.exception | indent(4) }}
+      {% if _execution_result_entry.warnings | length > 0 %}
+      │ Warnings    :
+      {% for warning in _execution_result_entry.warnings %}
+      │   [{{ loop.index }}] {{ warning }}
+      {% endfor %}
+      {% endif %}
       └─────────────────────────────────────────────────────┘
 
 - name: Fail the play when return_code is non-zero and fail_on_error is enabled

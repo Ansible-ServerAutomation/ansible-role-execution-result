@@ -32,6 +32,8 @@
             # of the failed task, including msg for module errors and exception for Python exceptions.
             execution_result_exception: >-
               {{ ansible_failed_result.exception | default(ansible_failed_result.msg) | default('') }}
+            # warnings captures any warnings returned by the task
+            execution_result_warnings: "{{ primary_task_result.warnings | default([]) }}"
             # ansible_failed_task.name is set automatically by Ansible in a rescue block
             # and contains the exact name of the task that caused the failure.
             execution_result_failed_task: "{{ ansible_failed_task.name }}"
@@ -49,20 +51,20 @@
             execution_result_message: >-
               stdout={{ primary_task_result.stdout | default('Task completed') }}
             execution_result_exception: ""
+            execution_result_warnings: "{{ primary_task_result.warnings | default([]) }}"
             execution_result_failed_task: ""
             # AWX Artifacts: publish result to the job Artifacts section
             execution_result_set_stats_enabled: true
           when: primary_task_result.rc | default(0) == 0
 
 # After the play completes, the AWX/Tower job Artifacts section will contain:
-#   execution_result_last:
-#     timestamp: "2026-03-26T12:00:00Z"
-#     host: "myhost"
-#     status: "SUCCESS" | "FAILURE"
-#     return_code: 0
-#     message: "..."
-#     failed_task: "N/A"
 #   execution_results:          # full list (when execution_result_accumulate: true)
-#     - { timestamp, host, status, return_code, message, failed_task }
+#     - timestamp: "2026-03-26T12:00:00Z"
+#       host: "myhost"
+#       status: "SUCCESS" | "FAILURE"
+#       return_code: 0
+#       message: "..."
+#       warnings: []
+#       failed_task: "N/A"
 #     - ...
 

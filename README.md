@@ -39,6 +39,7 @@ These variables must be passed by the calling role or task:
 | `execution_result_return_code` | yes | `0` | Return/exit code of the task being tracked |
 | `execution_result_message` | yes | `""` | Human-readable outcome or error message |
 | `execution_result_failed_task` | no | `""` | Name of the task that failed (for audit trail) |
+| `execution_result_warnings` | no | `[]` | List of warnings returned by the task (from `task_result.warnings`) |
 
 ---
 
@@ -99,6 +100,8 @@ Each entry in the list has the following fields:
   return_code: 1
   message:     "Script exited with code 1"
   failed_task: "Run the primary task"
+  warnings:
+    - "Platform linux on host Ubuntu is using the discovered Python interpreter..."
 ```
 
 ### AWX/Tower job Artifacts

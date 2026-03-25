@@ -6,6 +6,7 @@ execution_result_stderr: ""
 execution_result_message: ""
 execution_result_exception: ""
 execution_result_failed_task: ""
+execution_result_warnings: []
 
 # Logging configuration
 execution_result_log_enabled: false
