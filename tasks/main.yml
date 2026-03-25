@@ -47,17 +47,13 @@
 
 - name: Publish execution result to AWX/Tower job artifacts
   ansible.builtin.set_stats:
-    data: >-
-      {{
-        {'execution_result_last': _execution_result_entry}
-        | combine(
-            {execution_result_results_fact: vars[execution_result_results_fact] | default([])}
-            if execution_result_accumulate | bool else {}
-          )
-      }}
+    data:
+      "{{ execution_result_results_fact }}": "{{ vars[execution_result_results_fact] | default([]) }}"
     aggregate: true
     per_host: "{{ execution_result_set_stats_per_host | bool }}"
-  when: execution_result_set_stats_enabled | bool
+  when:
+    - execution_result_set_stats_enabled | bool
+    - execution_result_accumulate | bool
 
 - name: Ensure log directory exists (Linux)
   ansible.builtin.file:

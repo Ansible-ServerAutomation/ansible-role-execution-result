@@ -103,15 +103,14 @@ Each entry in the list has the following fields:
 
 ### AWX/Tower job Artifacts
 
-When `execution_result_set_stats_enabled: true` (the default), the role calls `ansible.builtin.set_stats` after every invocation. This populates the **Artifacts** section of the AWX/Tower job template with:
+When `execution_result_set_stats_enabled: true` (the default) and `execution_result_accumulate: true`, the role calls `ansible.builtin.set_stats` after every invocation. This populates the **Artifacts** section of the AWX/Tower job template with:
 
 | Artifact key | Description |
 |---|---|
-| `execution_result_last` | The most recent result entry (dict with `timestamp`, `host`, `status`, `return_code`, `message`, `failed_task`) |
-| `execution_results` | Full list of accumulated result entries (only present when `execution_result_accumulate: true`) |
+| `execution_results` | Full list of accumulated result entries from all invocations (contains `timestamp`, `host`, `status`, `return_code`, `message`, `failed_task` for each entry) |
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
-The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_result_last'] }}`.
+The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.
 
 ---
 
