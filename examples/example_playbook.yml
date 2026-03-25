@@ -1,0 +1,68 @@
+---
+# Example: how to include ansible-role-execution-result inside block/rescue
+# Results are automatically published to the AWX/Tower job Artifacts section
+# via ansible.builtin.set_stats (controlled by execution_result_set_stats_enabled).
+
+- name: Example play using execution_result role
+  hosts: all
+  gather_facts: true
+
+  roles:
+    - role: some_other_role   # your primary role
+
+  tasks:
+    - name: Perform a critical operation
+      block:
+        - name: Run the primary task
+          ansible.builtin.command: /usr/bin/my_script.sh
+          register: primary_task_result
+
+      rescue:
+        - name: Record execution failure via execution_result role
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            execution_result_return_code: "{{ primary_task_result.rc | default(1) }}"
+            execution_result_stdout: "{{ primary_task_result.stdout | default('') }}"
+            execution_result_stderr: "{{ primary_task_result.stderr | default('') }}"
+            execution_result_message: >-
+              stdout={{ primary_task_result.stdout | default('') }} stderr={{ primary_task_result.stderr | default('') }}
+            # execution_result_exception captures module-level failure messages not present in stdout/stderr
+            # ansible_failed_result is available inside a rescue block and holds the full result dict
+            # of the failed task, including msg for module errors and exception for Python exceptions.
+            execution_result_exception: >-
+              {{ ansible_failed_result.exception | default(ansible_failed_result.msg) | default('') }}
+            # ansible_failed_task.name is set automatically by Ansible in a rescue block
+            # and contains the exact name of the task that caused the failure.
+            execution_result_failed_task: "{{ ansible_failed_task.name }}"
+            # AWX Artifacts: publish result to the job Artifacts section
+            execution_result_set_stats_enabled: true
+
+      always:
+        - name: Record execution success via execution_result role
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            execution_result_return_code: "{{ primary_task_result.rc | default(0) }}"
+            execution_result_stdout: "{{ primary_task_result.stdout | default('') }}"
+            execution_result_stderr: "{{ primary_task_result.stderr | default('') }}"
+            execution_result_message: >-
+              stdout={{ primary_task_result.stdout | default('Task completed') }}
+            execution_result_exception: ""
+            execution_result_failed_task: ""
+            # AWX Artifacts: publish result to the job Artifacts section
+            execution_result_set_stats_enabled: true
+          when: primary_task_result.rc | default(0) == 0
+
+# After the play completes, the AWX/Tower job Artifacts section will contain:
+#   execution_result_last:
+#     timestamp: "2026-03-26T12:00:00Z"
+#     host: "myhost"
+#     status: "SUCCESS" | "FAILURE"
+#     return_code: 0
+#     message: "..."
+#     failed_task: "N/A"
+#   execution_results:          # full list (when execution_result_accumulate: true)
+#     - { timestamp, host, status, return_code, message, failed_task }
+#     - ...
+

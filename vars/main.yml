@@ -1,0 +1,6 @@
+---
+# Internal constants — not intended to be overridden by callers.
+# Role-level variable names are prefixed with the role name to avoid collisions.
+
+execution_result_role_name: "ansible-role-execution-result"
+execution_result_role_version: "1.0.0"

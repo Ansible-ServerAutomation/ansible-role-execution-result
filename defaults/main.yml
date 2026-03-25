@@ -1,0 +1,35 @@
+---
+# Default input variables (expected to be overridden by the caller)
+execution_result_return_code: 0
+execution_result_stdout: ""
+execution_result_stderr: ""
+execution_result_message: ""
+execution_result_exception: ""
+execution_result_failed_task: ""
+
+# Logging configuration
+execution_result_log_enabled: false
+execution_result_log_file: >-
+  {{ (ansible_os_family == 'Windows')
+     | ternary('C:\\ProgramData\\Ansible\\ansible_execution_results.log',
+               '/var/log/ansible_execution_results.log') }}
+execution_result_log_dir: >-
+  {{ (ansible_os_family == 'Windows')
+     | ternary('C:\\ProgramData\\Ansible',
+               '/var/log') }}
+
+# Result aggregation
+execution_result_accumulate: true
+execution_result_results_fact: "execution_results"
+
+# Timestamp format used in log entries
+execution_result_timestamp_format: "%Y-%m-%d %H:%M:%S"
+
+# Exit behaviour: when true, the role will fail the play if return_code != 0
+execution_result_fail_on_error: false
+
+# AWX/Tower artifact configuration (ansible.builtin.set_stats)
+# When true, the role publishes execution results to the AWX/Tower job Artifacts section
+execution_result_set_stats_enabled: true
+# When true, results are stored per-host in addition to the aggregated artifact
+execution_result_set_stats_per_host: false

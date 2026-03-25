@@ -1,0 +1,128 @@
+---
+- name: Validate required input variables
+  ansible.builtin.assert:
+    that:
+      - execution_result_return_code is defined
+      - execution_result_message is defined
+    fail_msg: >-
+      execution_result role requires 'execution_result_return_code' and
+      'execution_result_message' to be defined by the caller.
+    success_msg: "Required variables are present."
+
+- name: Determine result status
+  ansible.builtin.set_fact:
+    _execution_result_status: "{{ 'SUCCESS' if (execution_result_return_code | int) == 0 else 'FAILURE' }}"
+
+- name: Capture current timestamp
+  ansible.builtin.set_fact:
+    _execution_result_timestamp: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
+
+- name: Normalise and format result fields
+  ansible.builtin.set_fact:
+    _execution_result_stdout: "{{ execution_result_stdout | default('') | trim or '(none)' }}"
+    _execution_result_stderr: "{{ execution_result_stderr | default('') | trim or '(none)' }}"
+    _execution_result_message: "{{ execution_result_message | default('') | trim or '(none)' }}"
+    _execution_result_exception: "{{ execution_result_exception | default('') | trim or '(none)' }}"
+
+- name: Build result entry
+  ansible.builtin.set_fact:
+    _execution_result_entry:
+      timestamp: "{{ _execution_result_timestamp }}"
+      host: "{{ inventory_hostname }}"
+      status: "{{ _execution_result_status }}"
+      return_code: "{{ execution_result_return_code | int }}"
+      stdout: "{{ _execution_result_stdout }}"
+      stderr: "{{ _execution_result_stderr }}"
+      message: "{{ _execution_result_message }}"
+      exception: "{{ _execution_result_exception }}"
+      failed_task: "{{ execution_result_failed_task | default('') | trim or 'N/A' }}"
+
+- name: Accumulate execution results
+  ansible.builtin.set_fact:
+    "{{ execution_result_results_fact }}": >-
+      {{
+        (vars[execution_result_results_fact] | default([])) + [_execution_result_entry]
+      }}
+  when: execution_result_accumulate | bool
+
+- name: Publish execution result to AWX/Tower job artifacts
+  ansible.builtin.set_stats:
+    data: >-
+      {{
+        {'execution_result_last': _execution_result_entry}
+        | combine(
+            {execution_result_results_fact: vars[execution_result_results_fact] | default([])}
+            if execution_result_accumulate | bool else {}
+          )
+      }}
+    aggregate: true
+    per_host: "{{ execution_result_set_stats_per_host | bool }}"
+  when: execution_result_set_stats_enabled | bool
+
+- name: Ensure log directory exists (Linux)
+  ansible.builtin.file:
+    path: "{{ execution_result_log_dir }}"
+    state: directory
+    mode: "0755"
+  when:
+    - execution_result_log_enabled | bool
+    - ansible_os_family != 'Windows'
+
+- name: Ensure log directory exists (Windows)
+  ansible.windows.win_file:
+    path: "{{ execution_result_log_dir }}"
+    state: directory
+  when:
+    - execution_result_log_enabled | bool
+    - ansible_os_family == 'Windows'
+
+- name: Write execution result to log file (Linux)
+  ansible.builtin.lineinfile:
+    path: "{{ execution_result_log_file }}"
+    line: "{{ lookup('template', 'execution_result_entry.j2') | trim }}"
+    create: true
+    mode: "0644"
+  when:
+    - execution_result_log_enabled | bool
+    - ansible_os_family != 'Windows'
+
+- name: Write execution result to log file (Windows)
+  ansible.windows.win_lineinfile:
+    path: "{{ execution_result_log_file }}"
+    line: "{{ lookup('template', 'execution_result_entry.j2') | trim }}"
+    create: true
+  when:
+    - execution_result_log_enabled | bool
+    - ansible_os_family == 'Windows'
+
+- name: Emit execution result as debug output
+  ansible.builtin.debug:
+    msg: |
+      ┌─────────────────────────────────────────────────────┐
+      │                   EXECUTION RESULT                  │
+      ├─────────────────────────────────────────────────────┤
+      │ Host        : {{ _execution_result_entry.host }}
+      │ Timestamp   : {{ _execution_result_entry.timestamp }}
+      │ Status      : {{ _execution_result_entry.status }}
+      │ Return Code : {{ _execution_result_entry.return_code }}
+      │ Failed Task : {{ _execution_result_entry.failed_task }}
+      ├──────────────────────── Output ─────────────────────┤
+      │ Message     :
+      │   {{ _execution_result_entry.message | indent(4) }}
+      │ Stdout      :
+      │   {{ _execution_result_entry.stdout | indent(4) }}
+      │ Stderr      :
+      │   {{ _execution_result_entry.stderr | indent(4) }}
+      │ Exception   :
+      │   {{ _execution_result_entry.exception | indent(4) }}
+      └─────────────────────────────────────────────────────┘
+
+- name: Fail the play when return_code is non-zero and fail_on_error is enabled
+  ansible.builtin.fail:
+    msg: >-
+      Execution result role triggered a play failure.
+      Task '{{ execution_result_failed_task | default('unknown') }}' reported
+      return code {{ execution_result_return_code }}: {{ execution_result_message }}
+  when:
+    - execution_result_fail_on_error | bool
+    - (execution_result_return_code | int) != 0

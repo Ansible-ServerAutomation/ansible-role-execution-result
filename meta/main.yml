@@ -1,0 +1,27 @@
+---
+galaxy_info:
+  role_name: execution_result
+  author: Ansible-ServerAutomation
+  description: >
+    Tracks and logs the execution result of tasks in other roles.
+    Designed to be called from block/rescue sections to capture
+    return codes, messages, and the name of failed tasks.
+  license: MIT
+  min_ansible_version: "2.12"
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+  galaxy_tags:
+    - logging
+    - monitoring
+    - execution
+    - result
+    - automation
+
+dependencies: []
