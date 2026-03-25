@@ -25,3 +25,6 @@ galaxy_info:
     - automation
 
 dependencies: []
+
+collections:
+  - name: ansible.windows
