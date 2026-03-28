@@ -138,12 +138,15 @@
     - name: Publish execution result to AWX/Tower job artifacts
       ansible.builtin.set_stats:
         data:
-          "{{ execution_result_results_fact }}": "{{ vars[execution_result_results_fact] | default([]) }}"
+          "{{ execution_result_results_fact }}": >-
+            {{
+              vars[execution_result_results_fact] | default([_execution_result_entry])
+              if execution_result_accumulate | bool
+              else [_execution_result_entry]
+            }}
         aggregate: true
         per_host: "{{ execution_result_set_stats_per_host | bool }}"
-      when:
-        - execution_result_set_stats_enabled | bool
-        - execution_result_accumulate | bool
+      when: execution_result_set_stats_enabled | bool
 
     - name: Emit execution result as debug output
       ansible.builtin.debug:

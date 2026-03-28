@@ -33,7 +33,9 @@ execution_result_awx_validate_certs: false
 
 
 # Result aggregation
-execution_result_accumulate: false
+# When true: builds a list of results across multiple role invocations (useful for tracking multiple tasks)
+# When false: only the current result is published to artifacts (prevents duplicates if called multiple times)
+execution_result_accumulate: true
 execution_result_results_fact: "execution_results"
 
 # Exit behaviour: when true, the role will fail the play if return_code != 0

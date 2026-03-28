@@ -74,7 +74,7 @@ execution_result_awx_job_id: "12345"
 ### Configuration Defaults
 
 Default behavior ([defaults/main.yml](../defaults/main.yml)):
-- `execution_result_accumulate: true` (build fact list across invocations)
+- `execution_result_accumulate: true` (build fact list across invocations; set to `false` to publish only current result)
 - `execution_result_set_stats_enabled: true` (publish to AWX/Tower Artifacts)
 - `execution_result_fail_on_error: false` (continue on failure)
 - `execution_result_use_awx_api: auto-enabled` (when TOWER_HOST and TOWER_OAUTH_TOKEN credentials exist)
@@ -125,7 +125,7 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 
 1. **Missing warnings**: Forgot to `register:` the task being tracked
 2. **Empty AWX metadata**: Credential not attached to job template
-3. **Empty facts**: `execution_result_accumulate: false` disables accumulation and AWX publishing
+3. **Duplicate artifacts**: Role called multiple times with `execution_result_accumulate: true` creates multiple entries (set to `false` to publish only latest)
 4. **Wrong job ID env var**: Your AWX version might use `JOB_ID` instead of `TOWER_JOB_ID`
 5. **Empty scm_branch or scm_url**: Role automatically fetches from project endpoint
 

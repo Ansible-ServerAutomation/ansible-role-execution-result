@@ -102,7 +102,7 @@ Override these in your playbook or inventory to control role behaviour:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `execution_result_accumulate` | no | `true` | Accumulate results in an Ansible fact across role calls |
+| `execution_result_accumulate` | no | `true` | When `true`: builds a list of results across multiple role invocations. When `false`: only publishes the current result (useful to prevent duplicates when role is called multiple times) |
 | `execution_result_results_fact` | no | `execution_results` | Name of the fact that holds accumulated results |
 | `execution_result_fail_on_error` | no | `false` | Fail the play when `return_code` is non-zero |
 | `execution_result_set_stats_enabled` | no | `true` | Publish results to AWX/Tower job Artifacts via `set_stats` |
@@ -178,11 +178,19 @@ Each entry in the list has the following fields:
 
 ### AWX/Tower job Artifacts
 
-When `execution_result_set_stats_enabled: true` (the default) and `execution_result_accumulate: true`, the role calls `ansible.builtin.set_stats` after every invocation. This populates the **Artifacts** section of the AWX/Tower job template with:
+When `execution_result_set_stats_enabled: true` (the default), the role publishes results to the **Artifacts** section of the AWX/Tower job:
+
+**With `execution_result_accumulate: true` (default):**
+- Builds a list of all results across multiple role invocations in the same playbook run
+- Useful for tracking multiple different tasks/operations
+
+**With `execution_result_accumulate: false`:**
+- Publishes only the current result (overwrites previous on each invocation)
+- Useful when role is called multiple times but you only want the latest result
 
 | Artifact key | Description |
 |---|---|
-| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_url` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module`, `os_distribution`, `os_version`, `os_family`, `os_system`, `os_architecture` |
+| `execution_results` | List containing result entries. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_url` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module`, `os_distribution`, `os_version`, `os_family`, `os_system`, `os_architecture` |
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
 The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.
