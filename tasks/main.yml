@@ -29,7 +29,14 @@
   ansible.builtin.set_fact:
     _execution_result_entry:
       timestamp: "{{ _execution_result_timestamp }}"
-      host: "{{ inventory_hostname }}"
+      host_os: "{{ ansible_os_family | default(ansible_system | default('Unknown')) }}"
+      project: "{{ execution_result_project_name | default(lookup('env', 'AWX_PROJECT_NAME') | default(lookup('env', 'TOWER_PROJECT_NAME') | default('N/A'))) | trim }}"
+      organization: "{{ execution_result_organization | default(lookup('env', 'TOWER_ORGANIZATION') | default('N/A')) | trim }}"
+      scm_revision: "{{ execution_result_scm_revision | default(lookup('env', 'AWX_PROJECT_REVISION') | default('N/A')) | trim }}"
+      scm_branch: "{{ execution_result_scm_branch | default(lookup('env', 'AWX_PROJECT_SCM_BRANCH') | default('N/A')) | trim }}"
+      execution_environment: "{{ execution_result_execution_environment | default(lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | default('N/A')) | trim }}"
+      job_template: "{{ execution_result_job_template | default(lookup('env', 'AWX_JOB_TEMPLATE_NAME') | default(lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | default('N/A'))) | trim }}"
+      playbook: "{{ execution_result_playbook_name | default('N/A') | trim }}"
       status: "{{ _execution_result_status }}"
       return_code: "{{ execution_result_return_code | int }}"
       stdout: "{{ _execution_result_stdout }}"
@@ -38,6 +45,7 @@
       exception: "{{ _execution_result_exception }}"
       warnings: "{{ _execution_result_warnings }}"
       failed_task: "{{ execution_result_failed_task | default(ansible_failed_task.name | default('N/A')) | trim }}"
+      failed_task_module: "{{ execution_result_failed_task_module | default(ansible_failed_task.action | default('N/A')) | trim }}"
 
 - name: Accumulate execution results
   ansible.builtin.set_fact:
@@ -85,15 +93,25 @@
 - name: Emit execution result as debug output
   ansible.builtin.debug:
     msg: |
-      ┌─────────────────────────────────────────────────────┐
-      │                   EXECUTION RESULT                  │
-      ├─────────────────────────────────────────────────────┤
-      │ Host        : {{ _execution_result_entry.host }}
-      │ Timestamp   : {{ _execution_result_entry.timestamp }}
-      │ Status      : {{ _execution_result_entry.status }}
-      │ Return Code : {{ _execution_result_entry.return_code }}
-      │ Failed Task : {{ _execution_result_entry.failed_task }}
-      ├──────────────────────── Output ─────────────────────┤
+      ┌─────────────────────────────────────────────────────────────┐
+      │                      EXECUTION RESULT                       │
+      ├─────────────────────────────────────────────────────────────┤
+      │ Project         : {{ _execution_result_entry.project }}
+      │ Organization    : {{ _execution_result_entry.organization }}
+      │ Job Template    : {{ _execution_result_entry.job_template }}
+      │ Playbook        : {{ _execution_result_entry.playbook }}
+      ├─────────────────────────────────────────────────────────────┤
+      │ SCM Branch      : {{ _execution_result_entry.scm_branch }}
+      │ SCM Revision    : {{ _execution_result_entry.scm_revision[:12] if _execution_result_entry.scm_revision != 'N/A' else 'N/A' }}
+      │ Exec Environment: {{ _execution_result_entry.execution_environment }}
+      ├─────────────────────────────────────────────────────────────┤
+      │ Host OS         : {{ _execution_result_entry.host_os }}
+      │ Timestamp       : {{ _execution_result_entry.timestamp }}
+      │ Status          : {{ _execution_result_entry.status }}
+      │ Return Code     : {{ _execution_result_entry.return_code }}
+      │ Failed Task     : {{ _execution_result_entry.failed_task }}
+      │ Task Module     : {{ _execution_result_entry.failed_task_module }}
+      ├──────────────────────── Output ─────────────────────────────┤
       │ Message     :
       │   {{ _execution_result_entry.message | indent(4) }}
       │ Stdout      :

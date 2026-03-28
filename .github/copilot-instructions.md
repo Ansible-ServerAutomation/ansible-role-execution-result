@@ -15,7 +15,7 @@ An Ansible role that tracks and logs task execution results from `block/rescue/a
 
 1. **Validate** required inputs (`execution_result_return_code`, `execution_result_message`)
 2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
-3. **Build** structured result entry with 10 fields (timestamp, host, status, return_code, stdout, stderr, message, exception, warnings, failed_task)
+3. **Build** structured result entry with 18 fields (timestamp, host_os, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
 4. **Accumulate** in Ansible fact (`execution_results` by default)
 5. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
 6. **Log** to file (OS-specific: [tasks/logging_windows.yml](../tasks/logging_windows.yml) for Windows hosts)
@@ -45,6 +45,17 @@ When calling this role:
 Optional but important:
 - `execution_result_failed_task`: String (task name for audit trail)
 - `execution_result_warnings`: List (from registered task's `.warnings` field)
+
+**AWX/Tower Metadata** (auto-captured from environment variables):
+- `execution_result_project_name`: Auto-populated from `AWX_PROJECT_NAME` or `TOWER_PROJECT_NAME`
+- `execution_result_organization`: Auto-populated from `TOWER_ORGANIZATION`
+- `execution_result_scm_revision`: Auto-populated from `AWX_PROJECT_REVISION` (Git commit SHA)
+- `execution_result_scm_branch`: Auto-populated from `AWX_PROJECT_SCM_BRANCH` (Git branch)
+- `execution_result_execution_environment`: Auto-populated from `AWX_EXECUTION_ENVIRONMENT`
+- `execution_result_job_template`: Auto-populated from `AWX_JOB_TEMPLATE_NAME` or `TOWER_JOB_TEMPLATE_NAME`
+- `execution_result_playbook_name`: Must be set manually if needed (no auto-detection)
+
+These AWX metadata fields are **automatically populated** when the role runs in AWX/Tower. Users do not need to provide them unless they want to override the auto-detected values.
 
 **Critical**: To capture warnings, you **must** `register:` the task and pass `task_result.warnings`. See [examples/WARNINGS_GUIDE.md](../examples/WARNINGS_GUIDE.md).
 

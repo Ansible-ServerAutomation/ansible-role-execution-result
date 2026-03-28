@@ -6,7 +6,17 @@ execution_result_stderr: ""
 execution_result_message: ""
 execution_result_exception: ""
 execution_result_failed_task: ""
+execution_result_failed_task_module: ""
 execution_result_warnings: []
+
+# AWX/Tower metadata (auto-populated from environment variables if not provided)
+execution_result_project_name: ""
+execution_result_organization: ""
+execution_result_scm_revision: ""
+execution_result_scm_branch: ""
+execution_result_execution_environment: ""
+execution_result_job_template: ""
+execution_result_playbook_name: ""
 
 # Logging configuration
 execution_result_log_enabled: false

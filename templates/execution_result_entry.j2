@@ -1,9 +1,17 @@
 ---
-Timestamp   : {{ _execution_result_entry.timestamp }}
-Host        : {{ _execution_result_entry.host }}
-Status      : {{ _execution_result_entry.status }}
-Return Code : {{ _execution_result_entry.return_code }}
-Failed Task : {{ _execution_result_entry.failed_task }}
+Timestamp             : {{ _execution_result_entry.timestamp }}
+Host OS               : {{ _execution_result_entry.host_os }}
+Project               : {{ _execution_result_entry.project }}
+Organization          : {{ _execution_result_entry.organization }}
+Job Template          : {{ _execution_result_entry.job_template }}
+Playbook              : {{ _execution_result_entry.playbook }}
+SCM Branch            : {{ _execution_result_entry.scm_branch }}
+SCM Revision          : {{ _execution_result_entry.scm_revision }}
+Execution Environment : {{ _execution_result_entry.execution_environment }}
+Status                : {{ _execution_result_entry.status }}
+Return Code           : {{ _execution_result_entry.return_code }}
+Failed Task           : {{ _execution_result_entry.failed_task }}
+Failed Task Module    : {{ _execution_result_entry.failed_task_module }}
 Message     :
   {{ _execution_result_entry.message | indent(2) }}
 Stdout      :

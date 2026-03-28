@@ -40,7 +40,19 @@ These variables must be passed by the calling role or task:
 | `execution_result_message` | yes | `""` | Human-readable outcome or error message |
 | `execution_result_failed_task` | no | `""` | Name of the task that failed (for audit trail) |
 | `execution_result_warnings` | no | `[]` | List of warnings returned by the task (from `task_result.warnings`) |
+### AWX/Tower Metadata Variables (Optional)
 
+These variables are **automatically populated** from AWX/Tower environment variables if not explicitly provided:
+
+| Variable | Auto-populated from | Description |
+|---|---|---|
+| `execution_result_project_name` | `AWX_PROJECT_NAME` or `TOWER_PROJECT_NAME` | AWX/Tower project name |
+| `execution_result_organization` | `TOWER_ORGANIZATION` | AWX/Tower organization name |
+| `execution_result_scm_revision` | `AWX_PROJECT_REVISION` | Git commit SHA from source control |
+| `execution_result_scm_branch` | `AWX_PROJECT_SCM_BRANCH` | Git branch name from source control |
+| `execution_result_execution_environment` | `AWX_EXECUTION_ENVIRONMENT` | Execution environment name |
+| `execution_result_job_template` | `AWX_JOB_TEMPLATE_NAME` or `TOWER_JOB_TEMPLATE_NAME` | Job template name |
+| `execution_result_playbook_name` | n/a | Playbook filename (must be set manually if needed) |
 ---
 
 ## Configuration Variables
@@ -97,12 +109,20 @@ After one or more calls to this role (with `execution_result_accumulate: true`),
 Each entry in the list has the following fields:
 
 ```yaml
-- timestamp:   "2026-03-26T10:00:00Z"
-  host:        "webserver01"
-  status:      "FAILURE"          # SUCCESS or FAILURE
-  return_code: 1
-  message:     "Script exited with code 1"
-  failed_task: "Run the primary task"
+- timestamp:              "2026-03-26T10:00:00Z"
+  host_os:                "RedHat"                 # OS family (RedHat, Debian, Windows, etc.)
+  project:                "My Ansible Project"     # AWX/Tower project name
+  organization:           "IT Operations"          # AWX/Tower organization
+  job_template:           "Deploy Application"     # AWX/Tower job template
+  playbook:               "N/A"                    # Playbook filename (if set)
+  scm_branch:             "development"            # Git branch
+  scm_revision:           "a1b2c3d4e5f6..."        # Git commit SHA
+  execution_environment:  "Default EE"             # Execution environment
+  status:                 "FAILURE"                # SUCCESS or FAILURE
+  return_code:            1
+  message:                "Script exited with code 1"
+  failed_task:            "Run the primary task"
+  failed_task_module:     "ansible.builtin.command" # FQCN of the module that failed
   warnings:
     - "Platform linux on host Ubuntu is using the discovered Python interpreter..."
 ```
@@ -113,7 +133,7 @@ When `execution_result_set_stats_enabled: true` (the default) and `execution_res
 
 | Artifact key | Description |
 |---|---|
-| `execution_results` | Full list of accumulated result entries from all invocations (contains `timestamp`, `host`, `status`, `return_code`, `message`, `failed_task` for each entry) |
+| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `host_os`, `project`, `organization`, `job_template`, `playbook`, `scm_branch`, `scm_revision`, `execution_environment`, `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module` |
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
 The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.
