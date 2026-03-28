@@ -10,14 +10,16 @@ execution_result_failed_task_module: ""
 execution_result_warnings: []
 
 # AWX/Tower API configuration (automatically fetches metadata from AWX/Tower API)
-# Auto-enable API mode when TOWER_JOB_ID environment variable is detected
-execution_result_use_awx_api: "{{ (lookup('env', 'TOWER_JOB_ID') or lookup('env', 'AWX_JOB_ID') or lookup('env', 'CONTROLLER_JOB_ID')) | length > 0 }}"
+# Auto-enable API mode when credentials are available (even if job ID not auto-detected)
+execution_result_use_awx_api: "{{ ((lookup('env', 'TOWER_HOST') or lookup('env', 'CONTROLLER_HOST')) and (lookup('env', 'TOWER_OAUTH_TOKEN') or lookup('env', 'CONTROLLER_OAUTH_TOKEN'))) | length > 0 }}"
 # AWX/Tower API base URL (auto-detected from TOWER_HOST credential env var, override if needed)
 execution_result_awx_api_url: "{{ lookup('env', 'TOWER_HOST') or lookup('env', 'CONTROLLER_HOST') or lookup('env', 'AWX_HOST') or '' }}"
 # OAuth Bearer token for AWX API authentication (auto-detected from TOWER_OAUTH_TOKEN credential env var)
 execution_result_awx_token: "{{ lookup('env', 'TOWER_OAUTH_TOKEN') or lookup('env', 'CONTROLLER_OAUTH_TOKEN') or lookup('env', 'AWX_OAUTH_TOKEN') or '' }}"
-# Job ID to fetch details for (auto-detected from TOWER_JOB_ID, override if needed)
-execution_result_awx_job_id: "{{ lookup('env', 'TOWER_JOB_ID') or lookup('env', 'AWX_JOB_ID') or lookup('env', 'CONTROLLER_JOB_ID') or '' }}"
+# Job ID to fetch details for (auto-detected, checks workflow jobs too, or provide manually via extra_vars)
+execution_result_awx_job_id: "{{ lookup('env', 'TOWER_JOB_ID') or lookup('env', 'AWX_JOB_ID') or lookup('env', 'CONTROLLER_JOB_ID') or lookup('env', 'WORKFLOW_JOB_ID') or lookup('env', 'JOB_ID') or '' }}"
+# Manual job ID override (set via extra_vars when auto-detection fails)
+execution_result_awx_job_id_override: ""
 # Validate SSL certificates when connecting to AWX API
 execution_result_awx_validate_certs: false
 
