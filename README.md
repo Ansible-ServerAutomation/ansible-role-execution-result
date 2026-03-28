@@ -40,39 +40,36 @@ These variables must be passed by the calling role or task:
 | `execution_result_message` | yes | `""` | Human-readable outcome or error message |
 | `execution_result_failed_task` | no | `""` | Name of the task that failed (for audit trail) |
 | `execution_result_warnings` | no | `[]` | List of warnings returned by the task (from `task_result.warnings`) |
-### AWX/Tower Metadata Variables (Optional)
 
-These variables are **automatically populated** from AWX/Tower environment variables if not explicitly provided:
+### AWX/Tower Metadata Capture
 
-| Variable | Auto-populated from | Description |
-|---|---|---|
-| `execution_result_project_name` | `AWX_PROJECT_NAME` or `TOWER_PROJECT_NAME` | AWX/Tower project name |
-| `execution_result_organization` | `TOWER_ORGANIZATION` | AWX/Tower organization name |
-| `execution_result_scm_revision` | `AWX_PROJECT_REVISION` | Git commit SHA from source control |
-| `execution_result_scm_branch` | `AWX_PROJECT_SCM_BRANCH` | Git branch name from source control |
-| `execution_result_execution_environment` | `AWX_EXECUTION_ENVIRONMENT` | Execution environment name |
-| `execution_result_job_template` | `AWX_JOB_TEMPLATE_NAME` or `TOWER_JOB_TEMPLATE_NAME` | Job template name |
-| `execution_result_playbook_name` | n/a | Playbook filename (must be set manually if needed) |
+The role automatically captures **AWX/Tower metadata** (project, organization, job template, SCM details, execution environment) using an **API-first approach**:
 
-### AWX/Tower API Configuration (Optional)
+**When running in AWX/Tower:**
+- Automatically enabled when `TOWER_JOB_ID` environment variable is detected
+- Fetches metadata from AWX/Tower REST API using OAuth Bearer token authentication
+- Falls back to environment variables if API fetch fails
 
-When environment variables are unavailable (e.g., running locally or in CI/CD), you can enable API-based metadata fetching using **OAuth Bearer token authentication**:
+**When running locally/CI/CD:**
+- Provide API configuration via extra variables or credentials
+- Role will attempt API fetch if credentials are available
+
+**Priority Order for AWX Metadata Fields:**
+1. **API-fetched values** (primary source when `TOWER_JOB_ID` exists)
+2. **Environment variables** (fallback: `AWX_PROJECT_NAME`, `TOWER_ORGANIZATION`, etc.)
+3. **'N/A'** (if neither API nor env vars available)
+
+**API Configuration Variables:**
 
 | Variable | Default | Description |
 |---|---|---|
-| `execution_result_use_awx_api` | `false` | Enable fetching metadata from AWX/Tower API instead of environment variables |
-| `execution_result_awx_api_url` | `""` | AWX/Tower API base URL (e.g., `https://awx.example.com`) |
-| `execution_result_awx_token` | `""` | OAuth Bearer token for API authentication (**NO basic auth**) |
-| `execution_result_awx_job_id` | `""` | Job ID to fetch details for (auto-detected from `TOWER_JOB_ID` or `AWX_JOB_ID` env var) |
+| `execution_result_use_awx_api` | Auto-enabled when `TOWER_JOB_ID` exists | Enable fetching metadata from AWX/Tower API |
+| `execution_result_awx_api_url` | Auto-detected from `TOWER_HOST` or `AWX_HOST` | AWX/Tower API base URL |
+| `execution_result_awx_token` | Auto-detected from `TOWER_OAUTH_TOKEN` or `AWX_OAUTH_TOKEN` | OAuth Bearer token for API authentication |
+| `execution_result_awx_job_id` | Auto-detected from `TOWER_JOB_ID` or `AWX_JOB_ID` | Job ID to fetch metadata for |
 | `execution_result_awx_validate_certs` | `true` | Validate SSL certificates when connecting to AWX API |
 
-**Priority Order for Metadata:**
-1. User-provided variables (e.g., `execution_result_project_name`)
-2. API-fetched values (when `execution_result_use_awx_api: true`)
-3. Environment variables (e.g., `AWX_PROJECT_NAME`)
-4. Fallback to `'N/A'`
-
-**Example: Enable API Fetching**
+**Example: Override API Configuration (for local testing)**
 ```yaml
 - name: Record execution failure with API metadata
   ansible.builtin.include_role:
@@ -80,11 +77,10 @@ When environment variables are unavailable (e.g., running locally or in CI/CD), 
   vars:
     execution_result_return_code: 1
     execution_result_message: "Task failed"
-    # Enable AWX API fetching
-    execution_result_use_awx_api: true
+    # Override API configuration for local testing
     execution_result_awx_api_url: "https://awx.example.com"
-    execution_result_awx_token: "{{ lookup('env', 'AWX_API_TOKEN') }}"
-    # Job ID auto-detected from TOWER_JOB_ID env var
+    execution_result_awx_token: "{{ lookup('env', 'MY_AWX_TOKEN') }}"
+    execution_result_awx_job_id: "12345"
 ```
 
 ---
@@ -144,7 +140,6 @@ Each entry in the list has the following fields:
 
 ```yaml
 - timestamp:              "2026-03-26T10:00:00Z"
-  host_os:                "RedHat"                 # OS family (RedHat, Debian, Windows, etc.)
   project:                "My Ansible Project"     # AWX/Tower project name
   organization:           "IT Operations"          # AWX/Tower organization
   job_template:           "Deploy Application"     # AWX/Tower job template
@@ -167,7 +162,7 @@ When `execution_result_set_stats_enabled: true` (the default) and `execution_res
 
 | Artifact key | Description |
 |---|---|
-| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `host_os`, `project`, `organization`, `job_template`, `playbook`, `scm_branch`, `scm_revision`, `execution_environment`, `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module` |
+| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module` |
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
 The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.

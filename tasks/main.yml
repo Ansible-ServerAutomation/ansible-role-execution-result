@@ -28,9 +28,25 @@
         _execution_result_exception: "{{ execution_result_exception | default('') | trim or '(none)' }}"
         _execution_result_warnings: "{{ execution_result_warnings | default([]) }}"
 
+    - name: Debug - Check AWX environment variables
+      ansible.builtin.debug:
+        msg:
+          - "AWX_PROJECT_NAME: {{ lookup('env', 'AWX_PROJECT_NAME') }}"
+          - "TOWER_PROJECT_NAME: {{ lookup('env', 'TOWER_PROJECT_NAME') }}"
+          - "TOWER_ORGANIZATION: {{ lookup('env', 'TOWER_ORGANIZATION') }}"
+          - "AWX_PROJECT_REVISION: {{ lookup('env', 'AWX_PROJECT_REVISION') }}"
+          - "AWX_PROJECT_SCM_BRANCH: {{ lookup('env', 'AWX_PROJECT_SCM_BRANCH') }}"
+          - "AWX_EXECUTION_ENVIRONMENT: {{ lookup('env', 'AWX_EXECUTION_ENVIRONMENT') }}"
+          - "AWX_JOB_TEMPLATE_NAME: {{ lookup('env', 'AWX_JOB_TEMPLATE_NAME') }}"
+          - "TOWER_JOB_TEMPLATE_NAME: {{ lookup('env', 'TOWER_JOB_TEMPLATE_NAME') }}"
+          - "TOWER_JOB_ID: {{ lookup('env', 'TOWER_JOB_ID') }}"
+          - "ansible_os_family: {{ ansible_os_family | default('UNDEFINED') }}"
+          - "ansible_system: {{ ansible_system | default('UNDEFINED') }}"
+      when: execution_result_use_awx_api | bool
+
     - name: Determine AWX job ID for API fetch
       ansible.builtin.set_fact:
-        _execution_result_job_id: "{{ execution_result_awx_job_id or lookup('env', 'TOWER_JOB_ID') or lookup('env', 'AWX_JOB_ID') }}"
+        _execution_result_job_id: "{{ execution_result_awx_job_id }}"
       when:
         - execution_result_use_awx_api | bool
         - execution_result_awx_api_url | trim | length > 0
@@ -76,14 +92,13 @@
       ansible.builtin.set_fact:
         _execution_result_entry:
           timestamp: "{{ _execution_result_timestamp }}"
-          host_os: "{{ ansible_os_family | default(ansible_system, true) | default('Unknown', true) }}"
-          project: "{{ (execution_result_project_name | trim) or (_execution_result_api_project | default('') | trim) or (lookup('env', 'AWX_PROJECT_NAME') | trim) or (lookup('env', 'TOWER_PROJECT_NAME') | trim) or 'N/A' }}"
-          organization: "{{ (execution_result_organization | trim) or (_execution_result_api_organization | default('') | trim) or (lookup('env', 'TOWER_ORGANIZATION') | trim) or 'N/A' }}"
-          scm_revision: "{{ (execution_result_scm_revision | trim) or (_execution_result_api_scm_revision | default('') | trim) or (lookup('env', 'AWX_PROJECT_REVISION') | trim) or 'N/A' }}"
-          scm_branch: "{{ (execution_result_scm_branch | trim) or (_execution_result_api_scm_branch | default('') | trim) or (lookup('env', 'AWX_PROJECT_SCM_BRANCH') | trim) or 'N/A' }}"
-          execution_environment: "{{ (execution_result_execution_environment | trim) or (_execution_result_api_execution_environment | default('') | trim) or (lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | trim) or 'N/A' }}"
-          job_template: "{{ (execution_result_job_template | trim) or (_execution_result_api_job_template | default('') | trim) or (lookup('env', 'AWX_JOB_TEMPLATE_NAME') | trim) or (lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | trim) or 'N/A' }}"
-          playbook: "{{ (execution_result_playbook_name | trim) or (_execution_result_api_playbook | default('') | trim) or 'N/A' }}"
+          project: "{{ (_execution_result_api_project | default('') | trim) or (lookup('env', 'AWX_PROJECT_NAME') | trim) or (lookup('env', 'TOWER_PROJECT_NAME') | trim) or 'N/A' }}"
+          organization: "{{ (_execution_result_api_organization | default('') | trim) or (lookup('env', 'TOWER_ORGANIZATION') | trim) or 'N/A' }}"
+          scm_revision: "{{ (_execution_result_api_scm_revision | default('') | trim) or (lookup('env', 'AWX_PROJECT_REVISION') | trim) or 'N/A' }}"
+          scm_branch: "{{ (_execution_result_api_scm_branch | default('') | trim) or (lookup('env', 'AWX_PROJECT_SCM_BRANCH') | trim) or 'N/A' }}"
+          execution_environment: "{{ (_execution_result_api_execution_environment | default('') | trim) or (lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | trim) or 'N/A' }}"
+          job_template: "{{ (_execution_result_api_job_template | default('') | trim) or (lookup('env', 'AWX_JOB_TEMPLATE_NAME') | trim) or (lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | trim) or 'N/A' }}"
+          playbook: "{{ (_execution_result_api_playbook | default('') | trim) or 'N/A' }}"
           status: "{{ _execution_result_status }}"
           return_code: "{{ execution_result_return_code | int }}"
           stdout: "{{ _execution_result_stdout }}"
@@ -152,7 +167,6 @@
           │ SCM Revision    : {{ _execution_result_entry.scm_revision[:12] if _execution_result_entry.scm_revision != 'N/A' else 'N/A' }}
           │ Exec Environment: {{ _execution_result_entry.execution_environment }}
           ├─────────────────────────────────────────────────────────────┤
-          │ Host OS         : {{ _execution_result_entry.host_os }}
           │ Timestamp       : {{ _execution_result_entry.timestamp }}
           │ Status          : {{ _execution_result_entry.status }}
           │ Return Code     : {{ _execution_result_entry.return_code }}

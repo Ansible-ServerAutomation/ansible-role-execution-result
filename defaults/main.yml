@@ -9,24 +9,15 @@ execution_result_failed_task: ""
 execution_result_failed_task_module: ""
 execution_result_warnings: []
 
-# AWX/Tower metadata (auto-populated from environment variables if not provided)
-execution_result_project_name: ""
-execution_result_organization: ""
-execution_result_scm_revision: ""
-execution_result_scm_branch: ""
-execution_result_execution_environment: ""
-execution_result_job_template: ""
-execution_result_playbook_name: ""
-
-# AWX/Tower API configuration (for fetching metadata via API when env vars unavailable)
-# Enable API fetching mode (OAuth Bearer token authentication only)
-execution_result_use_awx_api: true
-# AWX/Tower API base URL (e.g., https://awx.example.com)
-execution_result_awx_api_url: "{{ lookup('env', 'AWX_HOST') | default(lookup('env', 'TOWER_HOST') | default('', true)) }}"
-# OAuth Bearer token for AWX API authentication (NO basic auth)
-execution_result_awx_token: "{{ lookup('env', 'AWX_OAUTH_TOKEN') | default(lookup('env', 'TOWER_OAUTH_TOKEN') | default('', true)) }}"
-# Job ID to fetch details for (auto-detected from TOWER_JOB_ID env var if not provided)
-execution_result_awx_job_id: ""
+# AWX/Tower API configuration (automatically fetches metadata from AWX/Tower API)
+# Auto-enable API mode when TOWER_JOB_ID environment variable is detected
+execution_result_use_awx_api: "{{ lookup('env', 'TOWER_JOB_ID') | length > 0 }}"
+# AWX/Tower API base URL (auto-detected from environment, override if needed)
+execution_result_awx_api_url: "{{ lookup('env', 'AWX_HOST') | default(lookup('env', 'TOWER_HOST'), true) }}"
+# OAuth Bearer token for AWX API authentication (must be provided via credential or extra vars)
+execution_result_awx_token: "{{ lookup('env', 'AWX_OAUTH_TOKEN') | default(lookup('env', 'TOWER_OAUTH_TOKEN'), true) }}"
+# Job ID to fetch details for (auto-detected from TOWER_JOB_ID, override if needed)
+execution_result_awx_job_id: "{{ lookup('env', 'TOWER_JOB_ID') | default(lookup('env', 'AWX_JOB_ID'), true) }}"
 # Validate SSL certificates when connecting to AWX API
 execution_result_awx_validate_certs: true
 

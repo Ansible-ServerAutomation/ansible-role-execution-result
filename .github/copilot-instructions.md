@@ -15,8 +15,8 @@ An Ansible role that tracks and logs task execution results from `block/rescue/a
 
 1. **Validate** required inputs (`execution_result_return_code`, `execution_result_message`)
 2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
-3. **Fetch AWX metadata** (optional, when `execution_result_use_awx_api: true`) via AWX API using OAuth Bearer token authentication
-4. **Build** structured result entry with 18 fields (timestamp, host_os, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
+3. **Fetch AWX metadata** (automatic when `TOWER_JOB_ID` exists) via AWX API using OAuth Bearer token authentication
+4. **Build** structured result entry with 17 fields (timestamp, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
 5. **Accumulate** in Ansible fact (`execution_results` by default)
 6. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
 7. **Log** to file (OS-specific: [tasks/logging_windows.yml](../tasks/logging_windows.yml) for Windows hosts)
@@ -47,27 +47,23 @@ Optional but important:
 - `execution_result_failed_task`: String (task name for audit trail)
 - `execution_result_warnings`: List (from registered task's `.warnings` field)
 
-**AWX/Tower Metadata** (auto-captured from environment variables):
-- `execution_result_project_name`: Auto-populated from `AWX_PROJECT_NAME` or `TOWER_PROJECT_NAME`
-- `execution_result_organization`: Auto-populated from `TOWER_ORGANIZATION`
-- `execution_result_scm_revision`: Auto-populated from `AWX_PROJECT_REVISION` (Git commit SHA)
-- `execution_result_scm_branch`: Auto-populated from `AWX_PROJECT_SCM_BRANCH` (Git branch)
-- `execution_result_execution_environment`: Auto-populated from `AWX_EXECUTION_ENVIRONMENT`
-- `execution_result_job_template`: Auto-populated from `AWX_JOB_TEMPLATE_NAME` or `TOWER_JOB_TEMPLATE_NAME`
-- `execution_result_playbook_name`: Must be set manually if needed (no auto-detection)
+**AWX/Tower Metadata** (auto-captured using API-first approach):
+- **When running in AWX/Tower**: Automatically fetched from AWX API when `TOWER_JOB_ID` environment variable is detected
+- **Priority chain**: API-fetched values → Environment variables → 'N/A'
+- **Fields captured**: `project`, `organization`, `scm_revision`, `scm_branch`, `execution_environment`, `job_template`, `playbook`
 
-These AWX metadata fields are **automatically populated** when the role runs in AWX/Tower. Users do not need to provide them unless they want to override the auto-detected values.
+**AWX API Configuration** (auto-detected from environment):
+- `execution_result_use_awx_api`: Auto-enabled when `TOWER_JOB_ID` exists
+- `execution_result_awx_api_url`: Auto-detected from `TOWER_HOST` or `AWX_HOST`
+- `execution_result_awx_token`: Auto-detected from `TOWER_OAUTH_TOKEN` or `AWX_OAUTH_TOKEN`
+- `execution_result_awx_job_id`: Auto-detected from `TOWER_JOB_ID` or `AWX_JOB_ID`
 
-**AWX API Integration**: The role supports fetching metadata via AWX/Tower API using OAuth Bearer token authentication when `execution_result_use_awx_api: true`. This is useful when:
-- Running outside AWX/Tower (locally, CI/CD pipelines)
-- Environment variables are not available
-- Need to fetch metadata from a different AWX instance
-
-Priority order for metadata fetching:
-1. User-provided variables (explicit values)
-2. API-fetched values (when API mode enabled)
-3. Environment variables (AWX/Tower job context)
-4. Fallback to 'N/A'
+**Override API configuration** for local testing:
+```yaml
+execution_result_awx_api_url: "https://awx.example.com"
+execution_result_awx_token: "{{ lookup('env', 'MY_AWX_TOKEN') }}"
+execution_result_awx_job_id: "12345"
+```
 
 **Critical**: To capture warnings, you **must** `register:` the task and pass `task_result.warnings`. See [examples/WARNINGS_GUIDE.md](../examples/WARNINGS_GUIDE.md).
 
@@ -78,6 +74,8 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 - `execution_result_accumulate: true` (build fact list across invocations)
 - `execution_result_set_stats_enabled: true` (publish to AWX/Tower Artifacts)
 - `execution_result_fail_on_error: false` (continue on failure)
+- `execution_result_use_awx_api: "{{ lookup('env', 'TOWER_JOB_ID') | length > 0 }}"` (auto-enable when running in AWX/Tower)
+- API configuration auto-detected from environment variables (`TOWER_HOST`, `TOWER_OAUTH_TOKEN`, `TOWER_JOB_ID`)
 
 ### File Structure Patterns
 
@@ -175,6 +173,8 @@ rescue:
       execution_result_message: "{{ task_result.stderr | default('Unknown error') }}"
       execution_result_failed_task: "{{ ansible_failed_task.name }}"
       execution_result_warnings: "{{ task_result.warnings | default([]) }}"
+      # AWX metadata is auto-captured via API when TOWER_JOB_ID exists
+      # No manual configuration needed when running in AWX/Tower
 ```
 
 AWX/Tower workflows can consume artifacts via `{{ artifacts['execution_results'] }}` in downstream job templates.
