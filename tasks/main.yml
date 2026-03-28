@@ -92,15 +92,19 @@
         - execution_result_awx_token | trim | length > 0
         - _execution_result_job_id | default('') | trim | length > 0
 
-    - name: Debug - Show relevant API response fields
-      ansible.builtin.debug:
-        msg:
-          - "=== API Response Fields for SCM Branch ==="
-          - "scm_branch: '{{ _execution_result_awx_job_data.json.scm_branch | default('KEY_NOT_FOUND') }}'"
-          - "project.scm_branch: '{{ _execution_result_awx_job_data.json.project.scm_branch | default('KEY_NOT_FOUND') }}'"
-          - "summary_fields.project.scm_branch: '{{ _execution_result_awx_job_data.json.summary_fields.project.scm_branch | default('KEY_NOT_FOUND') }}'"
-          - "=== Full Project Summary ==="
-          - "{{ _execution_result_awx_job_data.json.summary_fields.project | default({}) }}"
+    - name: Fetch project details to get SCM branch (when job scm_branch is empty)
+      ansible.builtin.uri:
+        url: "{{ execution_result_awx_api_url | regex_replace('/$', '') }}/api/v2/projects/{{ _execution_result_awx_job_data.json.summary_fields.project.id }}/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ execution_result_awx_token }}"
+          Content-Type: "application/json"
+        validate_certs: "{{ execution_result_awx_validate_certs | bool }}"
+        status_code: 200
+        return_content: true
+      register: _execution_result_awx_project_data
+      run_once: true
+      ignore_errors: true
       when:
         - execution_result_use_awx_api | bool
         - _execution_result_awx_job_data is defined
@@ -108,6 +112,8 @@
         - _execution_result_awx_job_data.status is defined
         - _execution_result_awx_job_data.status == 200
         - _execution_result_awx_job_data.json is defined
+        - _execution_result_awx_job_data.json.summary_fields.project.id is defined
+        - (_execution_result_awx_job_data.json.scm_branch | default('') | trim | length == 0)
 
     - name: Parse AWX API response and store metadata
       ansible.builtin.set_fact:
@@ -115,7 +121,7 @@
         _execution_result_api_organization: "{{ _execution_result_awx_job_data.json.summary_fields.organization.name | default('') }}"
         _execution_result_api_job_template: "{{ _execution_result_awx_job_data.json.summary_fields.job_template.name | default('') }}"
         _execution_result_api_playbook: "{{ _execution_result_awx_job_data.json.playbook | default('') }}"
-        _execution_result_api_scm_branch: "{{ _execution_result_awx_job_data.json.scm_branch | default('') }}"
+        _execution_result_api_scm_branch: "{{ _execution_result_awx_job_data.json.scm_branch | default('') or (_execution_result_awx_project_data.json.scm_branch | default('') if _execution_result_awx_project_data is defined and _execution_result_awx_project_data.status | default(0) == 200 else '') }}"
         _execution_result_api_scm_revision: "{{ _execution_result_awx_job_data.json.scm_revision | default('') }}"
         _execution_result_api_execution_environment: "{{ _execution_result_awx_job_data.json.summary_fields.execution_environment.name | default('') }}"
       when:
