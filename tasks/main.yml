@@ -28,24 +28,29 @@
         _execution_result_exception: "{{ execution_result_exception | default('') | trim or '(none)' }}"
         _execution_result_warnings: "{{ execution_result_warnings | default([]) }}"
 
-    - name: Debug - Check AWX environment variables
+    - name: Debug - Check AWX environment variables (ALWAYS RUNS FOR DIAGNOSTICS)
       ansible.builtin.debug:
         msg:
-          - "=== Credential Variables ==="
-          - "TOWER_HOST: {{ lookup('env', 'TOWER_HOST') }}"
-          - "TOWER_OAUTH_TOKEN: {{ lookup('env', 'TOWER_OAUTH_TOKEN') | ternary('***SET***', 'NOT SET') }}"
-          - "TOWER_VERIFY_SSL: {{ lookup('env', 'TOWER_VERIFY_SSL') }}"
-          - "CONTROLLER_HOST: {{ lookup('env', 'CONTROLLER_HOST') }}"
-          - "CONTROLLER_OAUTH_TOKEN: {{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') | ternary('***SET***', 'NOT SET') }}"
+          - "=== Credential Variables (from AWX-Tower-Token) ==="
+          - "TOWER_HOST: '{{ lookup('env', 'TOWER_HOST') }}'"
+          - "TOWER_OAUTH_TOKEN: {{ lookup('env', 'TOWER_OAUTH_TOKEN') | length > 0 | ternary('***SET (length=' + (lookup('env', 'TOWER_OAUTH_TOKEN') | length | string) + ')***', 'NOT SET') }}"
+          - "TOWER_VERIFY_SSL: '{{ lookup('env', 'TOWER_VERIFY_SSL') }}'"
+          - "CONTROLLER_HOST: '{{ lookup('env', 'CONTROLLER_HOST') }}'"
+          - "CONTROLLER_OAUTH_TOKEN: {{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') | length > 0 | ternary('***SET***', 'NOT SET') }}"
           - "=== Job Context Variables ==="
-          - "TOWER_JOB_ID: {{ lookup('env', 'TOWER_JOB_ID') }}"
-          - "AWX_JOB_ID: {{ lookup('env', 'AWX_JOB_ID') }}"
-          - "=== Computed Values ==="
-          - "use_awx_api: {{ execution_result_use_awx_api }}"
-          - "awx_api_url: {{ execution_result_awx_api_url }}"
-          - "awx_token: {{ execution_result_awx_token | ternary('***SET***', 'NOT SET') }}"
-          - "awx_job_id: {{ execution_result_awx_job_id }}"
-      when: execution_result_use_awx_api | bool
+          - "TOWER_JOB_ID: '{{ lookup('env', 'TOWER_JOB_ID') }}'"
+          - "AWX_JOB_ID: '{{ lookup('env', 'AWX_JOB_ID') }}'"
+          - "CONTROLLER_JOB_ID: '{{ lookup('env', 'CONTROLLER_JOB_ID') }}'"
+          - "=== Computed Configuration ==="
+          - "execution_result_use_awx_api: {{ execution_result_use_awx_api }}"
+          - "execution_result_awx_api_url: '{{ execution_result_awx_api_url }}'"
+          - "execution_result_awx_token length: {{ execution_result_awx_token | length }}"
+          - "execution_result_awx_job_id: '{{ execution_result_awx_job_id }}'"
+          - "=== Diagnosis ==="
+          - "API mode enabled: {{ execution_result_use_awx_api | bool }}"
+          - "Has API URL: {{ (execution_result_awx_api_url | trim | length > 0) | bool }}"
+          - "Has API token: {{ (execution_result_awx_token | trim | length > 0) | bool }}"
+          - "Has job ID: {{ (execution_result_awx_job_id | trim | length > 0) | bool }}"
 
     - name: Determine AWX job ID for API fetch
       ansible.builtin.set_fact:
