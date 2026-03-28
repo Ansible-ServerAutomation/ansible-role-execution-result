@@ -18,6 +18,18 @@ execution_result_execution_environment: ""
 execution_result_job_template: ""
 execution_result_playbook_name: ""
 
+# AWX/Tower API configuration (for fetching metadata via API when env vars unavailable)
+# Enable API fetching mode (OAuth Bearer token authentication only)
+execution_result_use_awx_api: true
+# AWX/Tower API base URL (e.g., https://awx.example.com)
+execution_result_awx_api_url: "https://awx.local"
+# OAuth Bearer token for AWX API authentication (NO basic auth)
+execution_result_awx_token: "{{ lookup('env', 'AWX_OAUTH_TOKEN') | default(lookup('env', 'TOWER_OAUTH_TOKEN') | default('', true)) }}"
+# Job ID to fetch details for (auto-detected from TOWER_JOB_ID env var if not provided)
+execution_result_awx_job_id: ""
+# Validate SSL certificates when connecting to AWX API
+execution_result_awx_validate_certs: true
+
 # Logging configuration
 execution_result_log_enabled: false
 execution_result_log_file: >-

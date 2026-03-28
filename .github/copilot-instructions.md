@@ -15,12 +15,13 @@ An Ansible role that tracks and logs task execution results from `block/rescue/a
 
 1. **Validate** required inputs (`execution_result_return_code`, `execution_result_message`)
 2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
-3. **Build** structured result entry with 18 fields (timestamp, host_os, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
-4. **Accumulate** in Ansible fact (`execution_results` by default)
-5. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
-6. **Log** to file (OS-specific: [tasks/logging_windows.yml](../tasks/logging_windows.yml) for Windows hosts)
-7. **Display** formatted debug output
-8. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
+3. **Fetch AWX metadata** (optional, when `execution_result_use_awx_api: true`) via AWX API using OAuth Bearer token authentication
+4. **Build** structured result entry with 18 fields (timestamp, host_os, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
+5. **Accumulate** in Ansible fact (`execution_results` by default)
+6. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
+7. **Log** to file (OS-specific: [tasks/logging_windows.yml](../tasks/logging_windows.yml) for Windows hosts)
+8. **Display** formatted debug output
+9. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
 
 ### Platform Support
 
@@ -56,6 +57,17 @@ Optional but important:
 - `execution_result_playbook_name`: Must be set manually if needed (no auto-detection)
 
 These AWX metadata fields are **automatically populated** when the role runs in AWX/Tower. Users do not need to provide them unless they want to override the auto-detected values.
+
+**AWX API Integration**: The role supports fetching metadata via AWX/Tower API using OAuth Bearer token authentication when `execution_result_use_awx_api: true`. This is useful when:
+- Running outside AWX/Tower (locally, CI/CD pipelines)
+- Environment variables are not available
+- Need to fetch metadata from a different AWX instance
+
+Priority order for metadata fetching:
+1. User-provided variables (explicit values)
+2. API-fetched values (when API mode enabled)
+3. Environment variables (AWX/Tower job context)
+4. Fallback to 'N/A'
 
 **Critical**: To capture warnings, you **must** `register:` the task and pass `task_result.warnings`. See [examples/WARNINGS_GUIDE.md](../examples/WARNINGS_GUIDE.md).
 

@@ -53,6 +53,40 @@ These variables are **automatically populated** from AWX/Tower environment varia
 | `execution_result_execution_environment` | `AWX_EXECUTION_ENVIRONMENT` | Execution environment name |
 | `execution_result_job_template` | `AWX_JOB_TEMPLATE_NAME` or `TOWER_JOB_TEMPLATE_NAME` | Job template name |
 | `execution_result_playbook_name` | n/a | Playbook filename (must be set manually if needed) |
+
+### AWX/Tower API Configuration (Optional)
+
+When environment variables are unavailable (e.g., running locally or in CI/CD), you can enable API-based metadata fetching using **OAuth Bearer token authentication**:
+
+| Variable | Default | Description |
+|---|---|---|
+| `execution_result_use_awx_api` | `false` | Enable fetching metadata from AWX/Tower API instead of environment variables |
+| `execution_result_awx_api_url` | `""` | AWX/Tower API base URL (e.g., `https://awx.example.com`) |
+| `execution_result_awx_token` | `""` | OAuth Bearer token for API authentication (**NO basic auth**) |
+| `execution_result_awx_job_id` | `""` | Job ID to fetch details for (auto-detected from `TOWER_JOB_ID` or `AWX_JOB_ID` env var) |
+| `execution_result_awx_validate_certs` | `true` | Validate SSL certificates when connecting to AWX API |
+
+**Priority Order for Metadata:**
+1. User-provided variables (e.g., `execution_result_project_name`)
+2. API-fetched values (when `execution_result_use_awx_api: true`)
+3. Environment variables (e.g., `AWX_PROJECT_NAME`)
+4. Fallback to `'N/A'`
+
+**Example: Enable API Fetching**
+```yaml
+- name: Record execution failure with API metadata
+  ansible.builtin.include_role:
+    name: execution_result
+  vars:
+    execution_result_return_code: 1
+    execution_result_message: "Task failed"
+    # Enable AWX API fetching
+    execution_result_use_awx_api: true
+    execution_result_awx_api_url: "https://awx.example.com"
+    execution_result_awx_token: "{{ lookup('env', 'AWX_API_TOKEN') }}"
+    # Job ID auto-detected from TOWER_JOB_ID env var
+```
+
 ---
 
 ## Configuration Variables
