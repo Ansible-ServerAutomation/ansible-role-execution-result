@@ -40,6 +40,11 @@ These variables must be passed by the calling role or task:
 | `execution_result_message` | yes | `""` | Human-readable outcome or error message |
 | `execution_result_failed_task` | no | `""` | Name of the task that failed (for audit trail) |
 | `execution_result_warnings` | no | `[]` | List of warnings returned by the task (from `task_result.warnings`) |
+| `execution_result_os_distribution` | no | `""` | Operating system distribution (e.g., Ubuntu, CentOS) |
+| `execution_result_os_version` | no | `""` | Operating system version (e.g., 20.04, 7.9) |
+| `execution_result_os_family` | no | `""` | Operating system family (e.g., Debian, RedHat) |
+| `execution_result_os_system` | no | `""` | System type (e.g., Linux, Windows) |
+| `execution_result_os_architecture` | no | `""` | System architecture (e.g., x86_64, aarch64) |
 
 ### AWX/Tower Metadata Capture
 
@@ -119,6 +124,12 @@ Override these in your playbook or inventory to control role behaviour:
         execution_result_message: "{{ primary_task_result.stderr | default('Unknown error') }}"
         execution_result_failed_task: "Run the primary task"
         execution_result_warnings: "{{ primary_task_result.warnings | default([]) }}"
+        # Optional OS details (will only appear in results if provided)
+        execution_result_os_distribution: "{{ ansible_distribution | default('') }}"
+        execution_result_os_version: "{{ ansible_distribution_version | default('') }}"
+        execution_result_os_family: "{{ ansible_os_family | default('') }}"
+        execution_result_os_system: "{{ ansible_system | default('') }}"
+        execution_result_os_architecture: "{{ ansible_architecture | default('') }}"
 ```
 
 **Important:** To capture warnings, you **must** use `register:` on the task you want to track, then pass `task_result.warnings` to `execution_result_warnings`. Warnings are only available in registered task results.
@@ -152,6 +163,11 @@ Each entry in the list has the following fields:
   failed_task_module:     "ansible.builtin.command" # FQCN of the module that failed
   warnings:
     - "Platform linux on host Ubuntu is using the discovered Python interpreter..."
+  os_distribution:        "Ubuntu"                 # Operating system distribution
+  os_version:             "20.04"                  # OS version
+  os_family:              "Debian"                 # OS family
+  os_system:              "Linux"                  # System type
+  os_architecture:        "x86_64"                 # Architecture
 ```
 
 ### AWX/Tower job Artifacts
@@ -160,7 +176,7 @@ When `execution_result_set_stats_enabled: true` (the default) and `execution_res
 
 | Artifact key | Description |
 |---|---|
-| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_url` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module` |
+| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_url` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module`, `os_distribution`, `os_version`, `os_family`, `os_system`, `os_architecture` |
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
 The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.

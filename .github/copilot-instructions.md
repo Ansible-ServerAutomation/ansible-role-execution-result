@@ -17,7 +17,7 @@ An Ansible role that tracks task execution results from `block/rescue/always` se
 2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
 3. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
 4. **Fetch project details** for SCM branch and URL when needed
-5. **Build** structured result entry with 18 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
+5. **Build** structured result entry with 23 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module, os_distribution, os_version, os_family, os_system, os_architecture)
 6. **Accumulate** in Ansible fact (`execution_results` by default)
 7. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
 8. **Display** formatted debug output
@@ -45,6 +45,11 @@ When calling this role:
 Optional but important:
 - `execution_result_failed_task`: String (task name for audit trail)
 - `execution_result_warnings`: List (from registered task's `.warnings` field)
+- `execution_result_os_distribution`: String (OS distribution, e.g., Ubuntu, CentOS)
+- `execution_result_os_version`: String (OS version, e.g., 20.04)
+- `execution_result_os_family`: String (OS family, e.g., Debian, RedHat)
+- `execution_result_os_system`: String (System type, e.g., Linux, Windows)
+- `execution_result_os_architecture`: String (Architecture, e.g., x86_64)
 
 **AWX/Tower Metadata** (auto-captured using API-first approach):
 - **When running in AWX/Tower**: Automatically fetched from AWX API when `TOWER_JOB_ID` environment variable is detected
@@ -160,6 +165,12 @@ rescue:
       execution_result_message: "{{ task_result.stderr | default('Unknown error') }}"
       execution_result_failed_task: "{{ ansible_failed_task.name }}"
       execution_result_warnings: "{{ task_result.warnings | default([]) }}"
+      # Optional OS details (only included if supplied)
+      execution_result_os_distribution: "{{ ansible_distribution | default('') }}"
+      execution_result_os_version: "{{ ansible_distribution_version | default('') }}"
+      execution_result_os_family: "{{ ansible_os_family | default('') }}"
+      execution_result_os_system: "{{ ansible_system | default('') }}"
+      execution_result_os_architecture: "{{ ansible_architecture | default('') }}"
       # AWX metadata is auto-captured via API when TOWER_JOB_ID exists
       # No manual configuration needed when running in AWX/Tower
 ```
