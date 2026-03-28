@@ -31,17 +31,20 @@
     - name: Debug - Check AWX environment variables
       ansible.builtin.debug:
         msg:
-          - "AWX_PROJECT_NAME: {{ lookup('env', 'AWX_PROJECT_NAME') }}"
-          - "TOWER_PROJECT_NAME: {{ lookup('env', 'TOWER_PROJECT_NAME') }}"
-          - "TOWER_ORGANIZATION: {{ lookup('env', 'TOWER_ORGANIZATION') }}"
-          - "AWX_PROJECT_REVISION: {{ lookup('env', 'AWX_PROJECT_REVISION') }}"
-          - "AWX_PROJECT_SCM_BRANCH: {{ lookup('env', 'AWX_PROJECT_SCM_BRANCH') }}"
-          - "AWX_EXECUTION_ENVIRONMENT: {{ lookup('env', 'AWX_EXECUTION_ENVIRONMENT') }}"
-          - "AWX_JOB_TEMPLATE_NAME: {{ lookup('env', 'AWX_JOB_TEMPLATE_NAME') }}"
-          - "TOWER_JOB_TEMPLATE_NAME: {{ lookup('env', 'TOWER_JOB_TEMPLATE_NAME') }}"
+          - "=== Credential Variables ==="
+          - "TOWER_HOST: {{ lookup('env', 'TOWER_HOST') }}"
+          - "TOWER_OAUTH_TOKEN: {{ lookup('env', 'TOWER_OAUTH_TOKEN') | ternary('***SET***', 'NOT SET') }}"
+          - "TOWER_VERIFY_SSL: {{ lookup('env', 'TOWER_VERIFY_SSL') }}"
+          - "CONTROLLER_HOST: {{ lookup('env', 'CONTROLLER_HOST') }}"
+          - "CONTROLLER_OAUTH_TOKEN: {{ lookup('env', 'CONTROLLER_OAUTH_TOKEN') | ternary('***SET***', 'NOT SET') }}"
+          - "=== Job Context Variables ==="
           - "TOWER_JOB_ID: {{ lookup('env', 'TOWER_JOB_ID') }}"
-          - "ansible_os_family: {{ ansible_os_family | default('UNDEFINED') }}"
-          - "ansible_system: {{ ansible_system | default('UNDEFINED') }}"
+          - "AWX_JOB_ID: {{ lookup('env', 'AWX_JOB_ID') }}"
+          - "=== Computed Values ==="
+          - "use_awx_api: {{ execution_result_use_awx_api }}"
+          - "awx_api_url: {{ execution_result_awx_api_url }}"
+          - "awx_token: {{ execution_result_awx_token | ternary('***SET***', 'NOT SET') }}"
+          - "awx_job_id: {{ execution_result_awx_job_id }}"
       when: execution_result_use_awx_api | bool
 
     - name: Determine AWX job ID for API fetch

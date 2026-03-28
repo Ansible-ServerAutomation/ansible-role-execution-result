@@ -12,14 +12,14 @@ execution_result_warnings: []
 # AWX/Tower API configuration (automatically fetches metadata from AWX/Tower API)
 # Auto-enable API mode when TOWER_JOB_ID environment variable is detected
 execution_result_use_awx_api: "{{ lookup('env', 'TOWER_JOB_ID') | length > 0 }}"
-# AWX/Tower API base URL (auto-detected from environment, override if needed)
-execution_result_awx_api_url: "{{ lookup('env', 'AWX_HOST') | default(lookup('env', 'TOWER_HOST'), true) }}"
-# OAuth Bearer token for AWX API authentication (must be provided via credential or extra vars)
-execution_result_awx_token: "{{ lookup('env', 'AWX_OAUTH_TOKEN') | default(lookup('env', 'TOWER_OAUTH_TOKEN'), true) }}"
+# AWX/Tower API base URL (auto-detected from TOWER_HOST credential env var, override if needed)
+execution_result_awx_api_url: "{{ lookup('env', 'TOWER_HOST') or lookup('env', 'CONTROLLER_HOST') or lookup('env', 'AWX_HOST') or '' }}"
+# OAuth Bearer token for AWX API authentication (auto-detected from TOWER_OAUTH_TOKEN credential env var)
+execution_result_awx_token: "{{ lookup('env', 'TOWER_OAUTH_TOKEN') or lookup('env', 'CONTROLLER_OAUTH_TOKEN') or lookup('env', 'AWX_OAUTH_TOKEN') or '' }}"
 # Job ID to fetch details for (auto-detected from TOWER_JOB_ID, override if needed)
 execution_result_awx_job_id: "{{ lookup('env', 'TOWER_JOB_ID') | default(lookup('env', 'AWX_JOB_ID'), true) }}"
 # Validate SSL certificates when connecting to AWX API
-execution_result_awx_validate_certs: true
+execution_result_awx_validate_certs: false
 
 # Logging configuration
 execution_result_log_enabled: false

@@ -91,7 +91,7 @@ Override these in your playbook or inventory to control role behaviour:
 
 | Variable | Default | Description |
 |---|---|---|
-| `execution_result_log_enabled` | `true` | Write results to a log file on the target host |
+| `execution_result_log_enabled` | `false` | Write results to a log file on the target host |
 | `execution_result_log_file` | Linux: `/var/log/ansible_execution_results.log` / Windows: `C:\ProgramData\Ansible\ansible_execution_results.log` | Path to the log file (auto-detected by `ansible_os_family`) |
 | `execution_result_log_dir` | Linux: `/var/log` / Windows: `C:\ProgramData\Ansible` | Directory for the log file (created if absent, auto-detected by `ansible_os_family`) |
 | `execution_result_accumulate` | `true` | Accumulate results in an Ansible fact across role calls |
