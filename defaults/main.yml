@@ -1,12 +1,13 @@
 ---
 # Default input variables (expected to be overridden by the caller)
-execution_result_return_code: "{{ execution_result_return_code | default(ansible_failed_result.rc) | default('') }}"
-execution_result_stdout: "{{ execution_result_stdout | default(ansible_failed_result.stdout) | default('') }}"
-execution_result_stderr: "{{ execution_result_stderr | default(ansible_failed_result.stderr) | default('') }}"
-execution_result_message: "{{ execution_result_message | default(ansible_failed_result.msg) | default('') }}"
-execution_result_exception: "{{ execution_result_exception | default(ansible_failed_result.exception) | default('') }}"
-execution_result_failed_task: "{{ execution_result_failed_task | default(ansible_failed_task.name) | default('') }}"
-execution_result_failed_task_module: "{{ execution_result_failed_task_module | default(ansible_failed_task.module_name) | default('') }}"
+# When not provided by caller, fallback logic in tasks uses ansible_failed_result/ansible_failed_task magic variables
+execution_result_return_code: ""
+execution_result_stdout: ""
+execution_result_stderr: ""
+execution_result_message: ""
+execution_result_exception: ""
+execution_result_failed_task: ""
+execution_result_failed_task_module: ""
 execution_result_warnings: []
 
 # OS details (optional - only included if supplied)

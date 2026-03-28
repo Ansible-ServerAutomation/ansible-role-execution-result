@@ -13,14 +13,15 @@ An Ansible role that tracks task execution results from `block/rescue/always` se
 
 ### Core Workflow ([tasks/main.yml](../tasks/main.yml))
 
-1. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
-2. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
-3. **Fetch project details** for SCM branch and URL when needed
-4. **Build** structured result entry with 23 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module, os_distribution, os_version, os_family, os_system, os_architecture)
-5. **Accumulate** in Ansible fact (`execution_results` by default)
-6. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
-7. **Display** formatted debug output
-8. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
+1. **Set fallback values** from magic variables when inputs not provided by caller
+2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
+3. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
+4. **Fetch project details** for SCM branch and URL when needed
+5. **Build** structured result entry with 23 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module, os_distribution, os_version, os_family, os_system, os_architecture)
+6. **Accumulate** in Ansible fact (`execution_results` by default)
+7. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
+8. **Display** formatted debug output
+9. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
 
 ### Platform Support
 

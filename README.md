@@ -32,21 +32,25 @@ ansible-role-execution-result/
 
 ## Input Variables
 
-These variables can be passed by the calling role or task. All have intelligent defaults with fallback chains:
+These variables can be passed by the calling role or task. When not provided, the role uses fallback logic to populate values from Ansible magic variables:
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `execution_result_return_code` | no | Auto-populated from `ansible_failed_result.rc` or empty | Return/exit code of the task being tracked |
-| `execution_result_message` | no | Auto-populated from `ansible_failed_result.msg` or empty | Human-readable outcome or error message |
-| `execution_result_failed_task` | no | Auto-populated from `ansible_failed_task.name` or empty | Name of the task that failed (for audit trail) |
-| `execution_result_warnings` | no | `[]` | List of warnings returned by the task (from `task_result.warnings`) |
-| `execution_result_os_distribution` | no | Auto-populated from `ansible_distribution` fact | Operating system distribution (e.g., Ubuntu, CentOS) |
-| `execution_result_os_version` | no | Auto-populated from `ansible_distribution_version` fact | Operating system version (e.g., 20.04, 7.9) |
-| `execution_result_os_family` | no | Auto-populated from `ansible_os_family` fact | Operating system family (e.g., Debian, RedHat) |
-| `execution_result_os_system` | no | Auto-populated from `ansible_system` fact | System type (e.g., Linux, Windows) |
-| `execution_result_os_architecture` | no | Auto-populated from `ansible_architecture` fact | System architecture (e.g., x86_64, aarch64) |
+| Variable | Required | Default | Fallback Source | Description |
+|---|---|---|---|---|
+| `execution_result_return_code` | no | `""` | `ansible_failed_result.rc` | Return/exit code of the task being tracked |
+| `execution_result_message` | no | `""` | `ansible_failed_result.msg` | Human-readable outcome or error message |
+| `execution_result_stdout` | no | `""` | `ansible_failed_result.stdout` | Standard output from the task |
+| `execution_result_stderr` | no | `""` | `ansible_failed_result.stderr` | Standard error from the task |
+| `execution_result_exception` | no | `""` | `ansible_failed_result.exception` | Exception traceback if available |
+| `execution_result_failed_task` | no | `""` | `ansible_failed_task.name` | Name of the task that failed (for audit trail) |
+| `execution_result_failed_task_module` | no | `""` | `ansible_failed_task.action` | Module name of the failed task |
+| `execution_result_warnings` | no | `[]` | N/A | List of warnings returned by the task (from `task_result.warnings`) |
+| `execution_result_os_distribution` | no | `""` | `ansible_distribution` | Operating system distribution (e.g., Ubuntu, CentOS) |
+| `execution_result_os_version` | no | `""` | `ansible_distribution_version` | Operating system version (e.g., 20.04, 7.9) |
+| `execution_result_os_family` | no | `""` | `ansible_os_family` | Operating system family (e.g., Debian, RedHat) |
+| `execution_result_os_system` | no | `""` | `ansible_system` | System type (e.g., Linux, Windows) |
+| `execution_result_os_architecture` | no | `""` | `ansible_architecture` | System architecture (e.g., x86_64, aarch64) |
 
-**Note:** While all variables have defaults, it's recommended to explicitly pass `execution_result_return_code` and `execution_result_message` from the calling task for accurate tracking.
+**Best Practice:** Explicitly pass `execution_result_return_code` and `execution_result_message` from the calling task for accurate tracking. The fallback values from magic variables are only available in rescue blocks.
 
 ### AWX/Tower Metadata Capture
 
