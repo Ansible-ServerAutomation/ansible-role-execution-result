@@ -23,23 +23,10 @@ execution_result_awx_job_id_override: ""
 # Validate SSL certificates when connecting to AWX API
 execution_result_awx_validate_certs: false
 
-# Logging configuration
-execution_result_log_enabled: false
-execution_result_log_file: >-
-  {{ (ansible_os_family == 'Windows')
-     | ternary('C:\\ProgramData\\Ansible\\ansible_execution_results.log',
-               '/var/log/ansible_execution_results.log') }}
-execution_result_log_dir: >-
-  {{ (ansible_os_family == 'Windows')
-     | ternary('C:\\ProgramData\\Ansible',
-               '/var/log') }}
 
 # Result aggregation
 execution_result_accumulate: true
 execution_result_results_fact: "execution_results"
-
-# Timestamp format used in log entries
-execution_result_timestamp_format: "%Y-%m-%d %H:%M:%S"
 
 # Exit behaviour: when true, the role will fail the play if return_code != 0
 execution_result_fail_on_error: false

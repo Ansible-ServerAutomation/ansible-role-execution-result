@@ -1,13 +1,13 @@
 # Ansible Role: execution-result
 
-An Ansible role that tracks and logs task execution results from `block/rescue/always` sections, publishing outcomes to AWX/Tower job Artifacts via `set_stats`.
+An Ansible role that tracks task execution results from `block/rescue/always` sections, publishing outcomes to AWX/Tower job Artifacts via `set_stats`.
 
 ## Repository Context
 
 - **Current branch**: `development` 
 - **Default branch**: `main`
 - **Owner**: Ansible-ServerAutomation
-- **Purpose**: Reusable role for error tracking and audit logging across automation workflows
+- **Purpose**: Reusable role for error tracking and audit reporting across automation workflows
 
 ## Architecture
 
@@ -15,19 +15,18 @@ An Ansible role that tracks and logs task execution results from `block/rescue/a
 
 1. **Validate** required inputs (`execution_result_return_code`, `execution_result_message`)
 2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
-3. **Fetch AWX metadata** (automatic when `TOWER_JOB_ID` exists) via AWX API using OAuth Bearer token authentication
-4. **Build** structured result entry with 17 fields (timestamp, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
-5. **Accumulate** in Ansible fact (`execution_results` by default)
-6. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
-7. **Log** to file (OS-specific: [tasks/logging_windows.yml](../tasks/logging_windows.yml) for Windows hosts)
+3. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
+4. **Fetch project details** for SCM branch when job doesn't override it
+5. **Build** structured result entry with 17 fields (timestamp, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
+6. **Accumulate** in Ansible fact (`execution_results` by default)
+7. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
 8. **Display** formatted debug output
 9. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
 
 ### Platform Support
 
-- **Linux**: Uses `ansible.builtin.file` and `ansible.builtin.lineinfile`
-- **Windows**: Uses `ansible.windows.win_file` and `ansible.windows.win_lineinfile` ([tasks/logging_windows.yml](../tasks/logging_windows.yml))
-- **OS Detection**: `ansible_os_family` conditionals and ternary operators for path defaults
+- **All platforms**: Runs on localhost (AWX runner) via `delegate_to: localhost`
+- **OS-agnostic**: No platform-specific tasks (removed logging feature)
 
 ## Code Conventions
 
@@ -70,29 +69,27 @@ execution_result_awx_job_id: "12345"
 ### Configuration Defaults
 
 Default behavior ([defaults/main.yml](../defaults/main.yml)):
-- `execution_result_log_enabled: false` (logging disabled by default)
 - `execution_result_accumulate: true` (build fact list across invocations)
 - `execution_result_set_stats_enabled: true` (publish to AWX/Tower Artifacts)
 - `execution_result_fail_on_error: false` (continue on failure)
-- `execution_result_use_awx_api: "{{ lookup('env', 'TOWER_JOB_ID') | length > 0 }}"` (auto-enable when running in AWX/Tower)
-- API configuration auto-detected from environment variables (`TOWER_HOST`, `TOWER_OAUTH_TOKEN`, `TOWER_JOB_ID`)
+- `execution_result_use_awx_api: auto-enabled` (when TOWER_HOST and TOWER_OAUTH_TOKEN credentials exist)
+- API configuration auto-detected from environment variables (`TOWER_HOST`, `TOWER_OAUTH_TOKEN`, `JOB_ID`)
+- `execution_result_awx_validate_certs: false` (disable SSL verification for self-signed certs)
 
 ### File Structure Patterns
 
 - `defaults/main.yml`: User-facing configuration with documentation comments
 - `vars/main.yml`: Internal constants (role name, version)
-- `tasks/main.yml`: Primary orchestration workflow
-- `tasks/logging_windows.yml`: Platform-specific includes
-- `templates/execution_result_entry.j2`: Log file format template
+- `tasks/main.yml`: Primary orchestration workflow (all tasks delegated to localhost)
 
 ## Development Guidelines
 
 ### When Modifying Tasks
 
 1. **Preserve validation**: Keep `ansible.builtin.assert` checks for required variables at top of [tasks/main.yml](../tasks/main.yml)
-2. **Maintain OS-agnostic design**: Use `ansible_os_family` conditionals, not hardcoded paths
+2. **Maintain delegation**: All tasks must run on localhost via `delegate_to: localhost` to access AWX credentials
 3. **Follow normalization pattern**: All empty/null fields render as `(none)` for consistent output
-4. **Test both platforms**: Changes affecting logging must work on Linux and Windows
+4. **API error handling**: Use `ignore_errors: true` with conditionals for optional API calls
 
 ### When Adding Variables
 
@@ -100,13 +97,6 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 2. **Document in defaults**: Add to [defaults/main.yml](../defaults/main.yml) with inline comments
 3. **Update README**: Reflect changes in variable tables and examples
 4. **Consider AWX/Tower impact**: New fields should appear in Artifacts output
-
-### Templates and Logging
-
-- **Log format**: [templates/execution_result_entry.j2](../templates/execution_result_entry.j2) uses YAML-like structure with `---` delimiters
-- **Indentation**: 2-space for multi-line fields
-- **Conditional rendering**: Only show warnings list if present
-- **Idempotency**: Uses `lineinfile` append-only mode
 
 ### Example Patterns
 
@@ -122,23 +112,19 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 - [ ] Test failure path (return_code ≠ 0)
 - [ ] Verify warnings capture with registered tasks
 - [ ] Check AWX/Tower Artifacts tab shows `execution_results`
-- [ ] Validate log file on both Linux and Windows targets
+- [ ] Verify API metadata capture (all 7 fields populated)
+- [ ] Test with missing job ID (should still work with manual override)
 - [ ] Confirm fact accumulation across multiple role invocations
 
 ### Common Gotchas
 
 1. **Missing warnings**: Forgot to `register:` the task being tracked
-2. **Wrong OS paths**: Hardcoded paths instead of using `ansible_os_family` ternary
+2. **Empty AWX metadata**: Credential not attached to job template
 3. **Empty facts**: `execution_result_accumulate: false` disables accumulation and AWX publishing
-4. **Log permissions**: Windows targets require proper directory access for logging
+4. **Wrong job ID env var**: Your AWX version might use `JOB_ID` instead of `TOWER_JOB_ID`
+5. **Empty scm_branch**: Role automatically fetches from project endpoint when job doesn't override it
 
 ## Commands
-
-### Install Dependencies
-
-```bash
-ansible-galaxy collection install ansible.windows
-```
 
 ### Test Locally
 
@@ -148,15 +134,16 @@ ansible-playbook examples/example_playbook.yml -i inventory.ini
 
 # Test with warnings
 ansible-playbook examples/example_with_warnings.yml -i inventory.ini
+
+# Test with API override (when running outside AWX)
+ansible-playbook examples/example_playbook.yml -i inventory.ini -e "execution_result_awx_job_id_override=123"
 ```
 
 ## Key Files
 
 - **[README.md](../README.md)**: User-facing documentation, usage examples, variable reference
-- **[tasks/main.yml](../tasks/main.yml)**: Core orchestration logic (validation → normalization → accumulation → logging → display)
-- **[tasks/logging_windows.yml](../tasks/logging_windows.yml)**: Windows-specific task includes
-- **[defaults/main.yml](../defaults/main.yml)**: All user-overridable configuration (31 lines)
-- **[templates/execution_result_entry.j2](../templates/execution_result_entry.j2)**: Log file format template
+- **[tasks/main.yml](../tasks/main.yml)**: Core orchestration logic (validation → normalization → API fetch → accumulation → display)
+- **[defaults/main.yml](../defaults/main.yml)**: All user-overridable configuration
 - **[examples/WARNINGS_GUIDE.md](../examples/WARNINGS_GUIDE.md)**: Troubleshooting warnings capture
 
 ## Integration Context

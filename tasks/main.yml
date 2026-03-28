@@ -28,33 +28,6 @@
         _execution_result_exception: "{{ execution_result_exception | default('') | trim or '(none)' }}"
         _execution_result_warnings: "{{ execution_result_warnings | default([]) }}"
 
-    - name: Debug - Check AWX environment variables (ALWAYS RUNS FOR DIAGNOSTICS)
-      ansible.builtin.debug:
-        msg:
-          - "=== Credential Variables (from AWX-Tower-Token) ==="
-          - "TOWER_HOST: '{{ lookup('env', 'TOWER_HOST') }}'"
-          - "TOWER_OAUTH_TOKEN: {{ 'SET (length=' + (lookup('env', 'TOWER_OAUTH_TOKEN') | length | string) + ')' if lookup('env', 'TOWER_OAUTH_TOKEN') else 'NOT SET' }}"
-          - "TOWER_VERIFY_SSL: '{{ lookup('env', 'TOWER_VERIFY_SSL') }}'"
-          - "CONTROLLER_HOST: '{{ lookup('env', 'CONTROLLER_HOST') }}'"
-          - "CONTROLLER_OAUTH_TOKEN: {{ 'SET (length=' + (lookup('env', 'CONTROLLER_OAUTH_TOKEN') | length | string) + ')' if lookup('env', 'CONTROLLER_OAUTH_TOKEN') else 'NOT SET' }}"
-          - "=== Job Context Variables ==="
-          - "TOWER_JOB_ID: '{{ lookup('env', 'TOWER_JOB_ID') }}'"
-          - "AWX_JOB_ID: '{{ lookup('env', 'AWX_JOB_ID') }}'"
-          - "CONTROLLER_JOB_ID: '{{ lookup('env', 'CONTROLLER_JOB_ID') }}'"
-          - "WORKFLOW_JOB_ID: '{{ lookup('env', 'WORKFLOW_JOB_ID') }}'"
-          - "JOB_ID: '{{ lookup('env', 'JOB_ID') }}'"
-          - "Manual override: '{{ execution_result_awx_job_id_override }}'"
-          - "=== Computed Configuration ==="
-          - "execution_result_use_awx_api: {{ execution_result_use_awx_api }}"
-          - "execution_result_awx_api_url: '{{ execution_result_awx_api_url }}'"
-          - "execution_result_awx_token: {{ 'SET (length=' + (execution_result_awx_token | length | string) + ')' if execution_result_awx_token else 'NOT SET' }}"
-          - "execution_result_awx_job_id: '{{ execution_result_awx_job_id }}'"
-          - "=== Diagnosis ==="
-          - "API mode enabled: {{ execution_result_use_awx_api | bool }}"
-          - "Has API URL: {{ execution_result_awx_api_url | trim | length > 0 }}"
-          - "Has API token: {{ execution_result_awx_token | trim | length > 0 }}"
-          - "Has job ID: {{ execution_result_awx_job_id | trim | length > 0 }}"
-
     - name: Determine AWX job ID for API fetch
       ansible.builtin.set_fact:
         _execution_result_job_id: "{{ execution_result_awx_job_id_override or execution_result_awx_job_id }}"
@@ -62,16 +35,6 @@
         - execution_result_use_awx_api | bool
         - execution_result_awx_api_url | trim | length > 0
         - execution_result_awx_token | trim | length > 0
-
-    - name: Show job ID resolution status
-      ansible.builtin.debug:
-        msg:
-          - "Job ID resolution:"
-          - "  Manual override: {{ execution_result_awx_job_id_override or 'Not provided' }}"
-          - "  Auto-detected: {{ execution_result_awx_job_id or 'Not detected' }}"
-          - "  Final job ID: {{ _execution_result_job_id | default('MISSING') }}"
-          - "  Will fetch from API: {{ (_execution_result_job_id | default('') | trim | length > 0) | bool }}"
-      when: execution_result_use_awx_api | bool
 
     - name: Fetch job details from AWX/Tower API using OAuth Bearer token
       ansible.builtin.uri:
@@ -170,31 +133,6 @@
       when:
         - execution_result_set_stats_enabled | bool
         - execution_result_accumulate | bool
-
-    - name: Ensure log directory exists (Linux)
-      ansible.builtin.file:
-        path: "{{ execution_result_log_dir }}"
-        state: directory
-        mode: "0755"
-      when:
-        - execution_result_log_enabled | bool
-        - ansible_os_family != 'Windows'
-
-    - name: Write execution result to log file (Linux)
-      ansible.builtin.lineinfile:
-        path: "{{ execution_result_log_file }}"
-        line: "{{ lookup('template', 'execution_result_entry.j2') | trim }}"
-        create: true
-        mode: "0644"
-      when:
-        - execution_result_log_enabled | bool
-        - ansible_os_family != 'Windows'
-
-    - name: Windows logging tasks
-      ansible.builtin.include_tasks: logging_windows.yml
-      when:
-        - execution_result_log_enabled | bool
-        - ansible_os_family == 'Windows'
 
     - name: Emit execution result as debug output
       ansible.builtin.debug:

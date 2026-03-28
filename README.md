@@ -91,9 +91,6 @@ Override these in your playbook or inventory to control role behaviour:
 
 | Variable | Default | Description |
 |---|---|---|
-| `execution_result_log_enabled` | `false` | Write results to a log file on the target host |
-| `execution_result_log_file` | Linux: `/var/log/ansible_execution_results.log` / Windows: `C:\ProgramData\Ansible\ansible_execution_results.log` | Path to the log file (auto-detected by `ansible_os_family`) |
-| `execution_result_log_dir` | Linux: `/var/log` / Windows: `C:\ProgramData\Ansible` | Directory for the log file (created if absent, auto-detected by `ansible_os_family`) |
 | `execution_result_accumulate` | `true` | Accumulate results in an Ansible fact across role calls |
 | `execution_result_results_fact` | `execution_results` | Name of the fact that holds accumulated results |
 | `execution_result_fail_on_error` | `false` | Fail the play when `return_code` is non-zero |
@@ -191,18 +188,8 @@ These play-level warnings are emitted by Ansible core and are not part of task r
 ## Requirements
 
 - Ansible >= 2.12
-- `gather_facts: true` must be enabled (the role uses `ansible_os_family` and `ansible_date_time`)
-- For Windows targets: the `ansible.windows` collection must be installed (`ansible-galaxy collection install ansible.windows`)
-
----
-
-## Log File Format
-
-When `execution_result_log_enabled: true`, each entry appended to the log file looks like:
-
-```
-[2026-03-26T10:00:00Z] HOST=webserver01 STATUS=FAILURE RC=1 TASK="Run the primary task" MSG="Script exited with code 1"
-```
+- `gather_facts: true` must be enabled (the role uses `ansible_date_time`)
+- For AWX/Tower metadata capture: "Red Hat Ansible Automation Platform" credential attached to job template
 
 ---
 
