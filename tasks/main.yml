@@ -92,6 +92,23 @@
         - execution_result_awx_token | trim | length > 0
         - _execution_result_job_id | default('') | trim | length > 0
 
+    - name: Debug - Show relevant API response fields
+      ansible.builtin.debug:
+        msg:
+          - "=== API Response Fields for SCM Branch ==="
+          - "scm_branch: '{{ _execution_result_awx_job_data.json.scm_branch | default('KEY_NOT_FOUND') }}'"
+          - "project.scm_branch: '{{ _execution_result_awx_job_data.json.project.scm_branch | default('KEY_NOT_FOUND') }}'"
+          - "summary_fields.project.scm_branch: '{{ _execution_result_awx_job_data.json.summary_fields.project.scm_branch | default('KEY_NOT_FOUND') }}'"
+          - "=== Full Project Summary ==="
+          - "{{ _execution_result_awx_job_data.json.summary_fields.project | default({}) }}"
+      when:
+        - execution_result_use_awx_api | bool
+        - _execution_result_awx_job_data is defined
+        - _execution_result_awx_job_data is not skipped
+        - _execution_result_awx_job_data.status is defined
+        - _execution_result_awx_job_data.status == 200
+        - _execution_result_awx_job_data.json is defined
+
     - name: Parse AWX API response and store metadata
       ansible.builtin.set_fact:
         _execution_result_api_project: "{{ _execution_result_awx_job_data.json.summary_fields.project.name | default('') }}"
