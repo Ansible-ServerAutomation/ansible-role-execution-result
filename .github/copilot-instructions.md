@@ -16,8 +16,8 @@ An Ansible role that tracks task execution results from `block/rescue/always` se
 1. **Validate** required inputs (`execution_result_return_code`, `execution_result_message`)
 2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
 3. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
-4. **Fetch project details** for SCM branch when job doesn't override it
-5. **Build** structured result entry with 17 fields (timestamp, project, organization, job_template, playbook, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
+4. **Fetch project details** for SCM branch and URL when needed
+5. **Build** structured result entry with 18 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module)
 6. **Accumulate** in Ansible fact (`execution_results` by default)
 7. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
 8. **Display** formatted debug output
@@ -49,7 +49,7 @@ Optional but important:
 **AWX/Tower Metadata** (auto-captured using API-first approach):
 - **When running in AWX/Tower**: Automatically fetched from AWX API when `TOWER_JOB_ID` environment variable is detected
 - **Priority chain**: API-fetched values → Environment variables → 'N/A'
-- **Fields captured**: `project`, `organization`, `scm_revision`, `scm_branch`, `execution_environment`, `job_template`, `playbook`
+- **Fields captured**: `project`, `organization`, `scm_url`, `scm_revision`, `scm_branch`, `execution_environment`, `job_template`, `playbook`
 
 **AWX API Configuration** (auto-detected from environment):
 - `execution_result_use_awx_api`: Auto-enabled when `TOWER_JOB_ID` exists
@@ -112,7 +112,7 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 - [ ] Test failure path (return_code ≠ 0)
 - [ ] Verify warnings capture with registered tasks
 - [ ] Check AWX/Tower Artifacts tab shows `execution_results`
-- [ ] Verify API metadata capture (all 7 fields populated)
+- [ ] Verify API metadata capture (all 8 fields populated)
 - [ ] Test with missing job ID (should still work with manual override)
 - [ ] Confirm fact accumulation across multiple role invocations
 
@@ -122,7 +122,7 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 2. **Empty AWX metadata**: Credential not attached to job template
 3. **Empty facts**: `execution_result_accumulate: false` disables accumulation and AWX publishing
 4. **Wrong job ID env var**: Your AWX version might use `JOB_ID` instead of `TOWER_JOB_ID`
-5. **Empty scm_branch**: Role automatically fetches from project endpoint when job doesn't override it
+5. **Empty scm_branch or scm_url**: Role automatically fetches from project endpoint
 
 ## Commands
 

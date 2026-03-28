@@ -141,6 +141,7 @@ Each entry in the list has the following fields:
   organization:           "IT Operations"          # AWX/Tower organization
   job_template:           "Deploy Application"     # AWX/Tower job template
   playbook:               "N/A"                    # Playbook filename (if set)
+  scm_url:                "https://github.com/..."  # Git repository URL
   scm_branch:             "development"            # Git branch
   scm_revision:           "a1b2c3d4e5f6..."        # Git commit SHA
   execution_environment:  "Default EE"             # Execution environment
@@ -159,7 +160,7 @@ When `execution_result_set_stats_enabled: true` (the default) and `execution_res
 
 | Artifact key | Description |
 |---|---|
-| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module` |
+| `execution_results` | Full list of accumulated result entries from all invocations. Each entry contains: `timestamp`, `project` (from API), `organization` (from API), `job_template` (from API), `playbook` (from API), `scm_url` (from API), `scm_branch` (from API), `scm_revision` (from API), `execution_environment` (from API), `status`, `return_code`, `stdout`, `stderr`, `message`, `exception`, `warnings`, `failed_task`, `failed_task_module` |
 
 Results from all hosts are aggregated into a single artifact (controlled by `execution_result_set_stats_per_host`).  
 The artifacts are visible in the *Artifacts* tab of each job run and can be consumed by downstream workflow job templates via `{{ artifacts['execution_results'] }}`.

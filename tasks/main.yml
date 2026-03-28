@@ -55,7 +55,7 @@
         - execution_result_awx_token | trim | length > 0
         - _execution_result_job_id | default('') | trim | length > 0
 
-    - name: Fetch project details to get SCM branch (when job scm_branch is empty)
+    - name: Fetch project details to get SCM branch and URL
       ansible.builtin.uri:
         url: "{{ execution_result_awx_api_url | regex_replace('/$', '') }}/api/v2/projects/{{ _execution_result_awx_job_data.json.summary_fields.project.id }}/"
         method: GET
@@ -76,7 +76,6 @@
         - _execution_result_awx_job_data.status == 200
         - _execution_result_awx_job_data.json is defined
         - _execution_result_awx_job_data.json.summary_fields.project.id is defined
-        - (_execution_result_awx_job_data.json.scm_branch | default('') | trim | length == 0)
 
     - name: Parse AWX API response and store metadata
       ansible.builtin.set_fact:
@@ -86,6 +85,7 @@
         _execution_result_api_playbook: "{{ _execution_result_awx_job_data.json.playbook | default('') }}"
         _execution_result_api_scm_branch: "{{ _execution_result_awx_job_data.json.scm_branch | default('') or (_execution_result_awx_project_data.json.scm_branch | default('') if _execution_result_awx_project_data is defined and _execution_result_awx_project_data.status | default(0) == 200 else '') }}"
         _execution_result_api_scm_revision: "{{ _execution_result_awx_job_data.json.scm_revision | default('') }}"
+        _execution_result_api_scm_url: "{{ _execution_result_awx_project_data.json.scm_url | default('') if _execution_result_awx_project_data is defined and _execution_result_awx_project_data.status | default(0) == 200 else '' }}"
         _execution_result_api_execution_environment: "{{ _execution_result_awx_job_data.json.summary_fields.execution_environment.name | default('') }}"
       when:
         - execution_result_use_awx_api | bool
@@ -103,6 +103,7 @@
           organization: "{{ (_execution_result_api_organization | default('') | trim) or (lookup('env', 'TOWER_ORGANIZATION') | trim) or 'N/A' }}"
           scm_revision: "{{ (_execution_result_api_scm_revision | default('') | trim) or (lookup('env', 'AWX_PROJECT_REVISION') | trim) or 'N/A' }}"
           scm_branch: "{{ (_execution_result_api_scm_branch | default('') | trim) or (lookup('env', 'AWX_PROJECT_SCM_BRANCH') | trim) or 'N/A' }}"
+          scm_url: "{{ (_execution_result_api_scm_url | default('') | trim) or 'N/A' }}"
           execution_environment: "{{ (_execution_result_api_execution_environment | default('') | trim) or (lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | trim) or 'N/A' }}"
           job_template: "{{ (_execution_result_api_job_template | default('') | trim) or (lookup('env', 'AWX_JOB_TEMPLATE_NAME') | trim) or (lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | trim) or 'N/A' }}"
           playbook: "{{ (_execution_result_api_playbook | default('') | trim) or 'N/A' }}"
@@ -145,6 +146,7 @@
           │ Job Template    : {{ _execution_result_entry.job_template }}
           │ Playbook        : {{ _execution_result_entry.playbook }}
           ├─────────────────────────────────────────────────────────────┤
+          │ SCM URL         : {{ _execution_result_entry.scm_url }}
           │ SCM Branch      : {{ _execution_result_entry.scm_branch }}
           │ SCM Revision    : {{ _execution_result_entry.scm_revision[:12] if _execution_result_entry.scm_revision != 'N/A' else 'N/A' }}
           │ Exec Environment: {{ _execution_result_entry.execution_environment }}
