@@ -20,7 +20,7 @@ ansible-role-execution-result/
 ├── meta/
 │   └── main.yml          # Galaxy metadata and dependencies
 ├── tasks/
-│   └── main.yml          # Core logic: validate, record, log, emit debug
+│   └── main.yml          # Core logic: normalize, build result, publish, emit debug
 ├── templates/
 │   └── execution_result_entry.j2  # Log line template
 ├── vars/
@@ -32,19 +32,21 @@ ansible-role-execution-result/
 
 ## Input Variables
 
-These variables must be passed by the calling role or task:
+These variables can be passed by the calling role or task. All have intelligent defaults with fallback chains:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `execution_result_return_code` | yes | `0` | Return/exit code of the task being tracked |
-| `execution_result_message` | yes | `""` | Human-readable outcome or error message |
-| `execution_result_failed_task` | no | `""` | Name of the task that failed (for audit trail) |
+| `execution_result_return_code` | no | Auto-populated from `ansible_failed_result.rc` or empty | Return/exit code of the task being tracked |
+| `execution_result_message` | no | Auto-populated from `ansible_failed_result.msg` or empty | Human-readable outcome or error message |
+| `execution_result_failed_task` | no | Auto-populated from `ansible_failed_task.name` or empty | Name of the task that failed (for audit trail) |
 | `execution_result_warnings` | no | `[]` | List of warnings returned by the task (from `task_result.warnings`) |
-| `execution_result_os_distribution` | no | `""` | Operating system distribution (e.g., Ubuntu, CentOS) |
-| `execution_result_os_version` | no | `""` | Operating system version (e.g., 20.04, 7.9) |
-| `execution_result_os_family` | no | `""` | Operating system family (e.g., Debian, RedHat) |
-| `execution_result_os_system` | no | `""` | System type (e.g., Linux, Windows) |
-| `execution_result_os_architecture` | no | `""` | System architecture (e.g., x86_64, aarch64) |
+| `execution_result_os_distribution` | no | Auto-populated from `ansible_distribution` fact | Operating system distribution (e.g., Ubuntu, CentOS) |
+| `execution_result_os_version` | no | Auto-populated from `ansible_distribution_version` fact | Operating system version (e.g., 20.04, 7.9) |
+| `execution_result_os_family` | no | Auto-populated from `ansible_os_family` fact | Operating system family (e.g., Debian, RedHat) |
+| `execution_result_os_system` | no | Auto-populated from `ansible_system` fact | System type (e.g., Linux, Windows) |
+| `execution_result_os_architecture` | no | Auto-populated from `ansible_architecture` fact | System architecture (e.g., x86_64, aarch64) |
+
+**Note:** While all variables have defaults, it's recommended to explicitly pass `execution_result_return_code` and `execution_result_message` from the calling task for accurate tracking.
 
 ### AWX/Tower Metadata Capture
 
@@ -66,13 +68,13 @@ The role automatically captures **AWX/Tower metadata** (project, organization, j
 
 **API Configuration Variables:**
 
-| Variable | Default | Description |
-|---|---|---|
-| `execution_result_use_awx_api` | Auto-enabled when `TOWER_JOB_ID` exists | Enable fetching metadata from AWX/Tower API |
-| `execution_result_awx_api_url` | Auto-detected from `TOWER_HOST` or `AWX_HOST` | AWX/Tower API base URL |
-| `execution_result_awx_token` | Auto-detected from `TOWER_OAUTH_TOKEN` or `AWX_OAUTH_TOKEN` | OAuth Bearer token for API authentication |
-| `execution_result_awx_job_id` | Auto-detected from `TOWER_JOB_ID` or `AWX_JOB_ID` | Job ID to fetch metadata for |
-| `execution_result_awx_validate_certs` | `true` | Validate SSL certificates when connecting to AWX API |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `execution_result_use_awx_api` | no | Auto-enabled when `TOWER_HOST` and `TOWER_OAUTH_TOKEN` credentials exist | Enable fetching metadata from AWX/Tower API |
+| `execution_result_awx_api_url` | no | Auto-populated from `TOWER_HOST`, `CONTROLLER_HOST`, or `AWX_HOST` env vars | AWX/Tower API base URL |
+| `execution_result_awx_token` | no | Auto-populated from `TOWER_OAUTH_TOKEN`, `CONTROLLER_OAUTH_TOKEN`, or `AWX_OAUTH_TOKEN` env vars | OAuth Bearer token for API authentication |
+| `execution_result_awx_job_id` | no | Auto-populated from `TOWER_JOB_ID`, `AWX_JOB_ID`, `CONTROLLER_JOB_ID`, `WORKFLOW_JOB_ID`, or `JOB_ID` env vars | Job ID to fetch metadata for |
+| `execution_result_awx_validate_certs` | no | `false` | Validate SSL certificates when connecting to AWX API |
 
 **Example: Override API Configuration (for local testing)**
 ```yaml
@@ -94,13 +96,13 @@ The role automatically captures **AWX/Tower metadata** (project, organization, j
 
 Override these in your playbook or inventory to control role behaviour:
 
-| Variable | Default | Description |
-|---|---|---|
-| `execution_result_accumulate` | `true` | Accumulate results in an Ansible fact across role calls |
-| `execution_result_results_fact` | `execution_results` | Name of the fact that holds accumulated results |
-| `execution_result_fail_on_error` | `false` | Fail the play when `return_code` is non-zero |
-| `execution_result_set_stats_enabled` | `true` | Publish results to AWX/Tower job Artifacts via `set_stats` |
-| `execution_result_set_stats_per_host` | `false` | Store stats per-host in addition to the aggregated artifact |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `execution_result_accumulate` | no | `true` | Accumulate results in an Ansible fact across role calls |
+| `execution_result_results_fact` | no | `execution_results` | Name of the fact that holds accumulated results |
+| `execution_result_fail_on_error` | no | `false` | Fail the play when `return_code` is non-zero |
+| `execution_result_set_stats_enabled` | no | `true` | Publish results to AWX/Tower job Artifacts via `set_stats` |
+| `execution_result_set_stats_per_host` | no | `false` | Store stats per-host in addition to the aggregated artifact |
 
 ---
 

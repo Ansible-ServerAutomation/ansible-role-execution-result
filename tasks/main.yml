@@ -2,16 +2,6 @@
 - name: Execute all tasks on localhost
   delegate_to: localhost
   block:
-    - name: Validate required input variables
-      ansible.builtin.assert:
-        that:
-          - execution_result_return_code is defined
-          - execution_result_message is defined
-        fail_msg: >-
-          execution_result role requires 'execution_result_return_code' and
-          'execution_result_message' to be defined by the caller.
-        success_msg: "Required variables are present."
-
     - name: Determine result status
       ansible.builtin.set_fact:
         _execution_result_status: "{{ 'SUCCESS' if (execution_result_return_code | int) == 0 else 'FAILURE' }}"

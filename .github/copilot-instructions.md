@@ -13,15 +13,14 @@ An Ansible role that tracks task execution results from `block/rescue/always` se
 
 ### Core Workflow ([tasks/main.yml](../tasks/main.yml))
 
-1. **Validate** required inputs (`execution_result_return_code`, `execution_result_message`)
-2. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
-3. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
-4. **Fetch project details** for SCM branch and URL when needed
-5. **Build** structured result entry with 23 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module, os_distribution, os_version, os_family, os_system, os_architecture)
-6. **Accumulate** in Ansible fact (`execution_results` by default)
-7. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
-8. **Display** formatted debug output
-9. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
+1. **Normalize** data (determine SUCCESS/FAILURE status, capture timestamp, format fields)
+2. **Fetch AWX metadata** via AWX API using OAuth Bearer token authentication (auto-enabled when credentials exist)
+3. **Fetch project details** for SCM branch and URL when needed
+4. **Build** structured result entry with 23 fields (timestamp, project, organization, job_template, playbook, scm_url, scm_branch, scm_revision, execution_environment, status, return_code, stdout, stderr, message, exception, warnings, failed_task, failed_task_module, os_distribution, os_version, os_family, os_system, os_architecture)
+5. **Accumulate** in Ansible fact (`execution_results` by default)
+6. **Publish** to AWX/Tower Artifacts using `ansible.builtin.set_stats`
+7. **Display** formatted debug output
+8. **Optionally fail** play if `execution_result_fail_on_error: true` and return_code ≠ 0
 
 ### Platform Support
 
@@ -91,10 +90,10 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 
 ### When Modifying Tasks
 
-1. **Preserve validation**: Keep `ansible.builtin.assert` checks for required variables at top of [tasks/main.yml](../tasks/main.yml)
-2. **Maintain delegation**: All tasks must run on localhost via `delegate_to: localhost` to access AWX credentials
-3. **Follow normalization pattern**: All empty/null fields render as `(none)` for consistent output
-4. **API error handling**: Use `ignore_errors: true` with conditionals for optional API calls
+1. **Maintain delegation**: All tasks must run on localhost via `delegate_to: localhost` to access AWX credentials
+2. **Follow normalization pattern**: All empty/null fields render as `(none)` for consistent output
+3. **API error handling**: Use `ignore_errors: true` with conditionals for optional API calls
+4. **Rely on defaults**: Variables have intelligent defaults with fallback chains; no explicit validation needed
 
 ### When Adding Variables
 
@@ -147,7 +146,7 @@ ansible-playbook examples/example_playbook.yml -i inventory.ini -e "execution_re
 ## Key Files
 
 - **[README.md](../README.md)**: User-facing documentation, usage examples, variable reference
-- **[tasks/main.yml](../tasks/main.yml)**: Core orchestration logic (validation → normalization → API fetch → accumulation → display)
+- **[tasks/main.yml](../tasks/main.yml)**: Core orchestration logic (normalization → API fetch → accumulation → display)
 - **[defaults/main.yml](../defaults/main.yml)**: All user-overridable configuration
 - **[examples/WARNINGS_GUIDE.md](../examples/WARNINGS_GUIDE.md)**: Troubleshooting warnings capture
 
