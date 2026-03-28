@@ -29,14 +29,14 @@
   ansible.builtin.set_fact:
     _execution_result_entry:
       timestamp: "{{ _execution_result_timestamp }}"
-      host_os: "{{ ansible_os_family | default(ansible_system | default('Unknown')) }}"
-      project: "{{ execution_result_project_name | default(lookup('env', 'AWX_PROJECT_NAME') | default(lookup('env', 'TOWER_PROJECT_NAME') | default('N/A'))) | trim }}"
-      organization: "{{ execution_result_organization | default(lookup('env', 'TOWER_ORGANIZATION') | default('N/A')) | trim }}"
-      scm_revision: "{{ execution_result_scm_revision | default(lookup('env', 'AWX_PROJECT_REVISION') | default('N/A')) | trim }}"
-      scm_branch: "{{ execution_result_scm_branch | default(lookup('env', 'AWX_PROJECT_SCM_BRANCH') | default('N/A')) | trim }}"
-      execution_environment: "{{ execution_result_execution_environment | default(lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | default('N/A')) | trim }}"
-      job_template: "{{ execution_result_job_template | default(lookup('env', 'AWX_JOB_TEMPLATE_NAME') | default(lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | default('N/A'))) | trim }}"
-      playbook: "{{ execution_result_playbook_name | default('N/A') | trim }}"
+      host_os: "{{ ansible_os_family | default(ansible_system, true) | default('Unknown', true) }}"
+      project: "{{ (execution_result_project_name | trim) or (lookup('env', 'AWX_PROJECT_NAME') | trim) or (lookup('env', 'TOWER_PROJECT_NAME') | trim) or 'N/A' }}"
+      organization: "{{ (execution_result_organization | trim) or (lookup('env', 'TOWER_ORGANIZATION') | trim) or 'N/A' }}"
+      scm_revision: "{{ (execution_result_scm_revision | trim) or (lookup('env', 'AWX_PROJECT_REVISION') | trim) or 'N/A' }}"
+      scm_branch: "{{ (execution_result_scm_branch | trim) or (lookup('env', 'AWX_PROJECT_SCM_BRANCH') | trim) or 'N/A' }}"
+      execution_environment: "{{ (execution_result_execution_environment | trim) or (lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | trim) or 'N/A' }}"
+      job_template: "{{ (execution_result_job_template | trim) or (lookup('env', 'AWX_JOB_TEMPLATE_NAME') | trim) or (lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | trim) or 'N/A' }}"
+      playbook: "{{ (execution_result_playbook_name | trim) or 'N/A' }}"
       status: "{{ _execution_result_status }}"
       return_code: "{{ execution_result_return_code | int }}"
       stdout: "{{ _execution_result_stdout }}"
@@ -44,8 +44,8 @@
       message: "{{ _execution_result_message }}"
       exception: "{{ _execution_result_exception }}"
       warnings: "{{ _execution_result_warnings }}"
-      failed_task: "{{ execution_result_failed_task | default(ansible_failed_task.name | default('N/A')) | trim }}"
-      failed_task_module: "{{ execution_result_failed_task_module | default(ansible_failed_task.action | default('N/A')) | trim }}"
+      failed_task: "{{ (execution_result_failed_task | trim) or (ansible_failed_task.name | default('', true) | trim) or 'N/A' }}"
+      failed_task_module: "{{ (execution_result_failed_task_module | trim) or (ansible_failed_task.action | default('', true) | trim) or 'N/A' }}"
 
 - name: Accumulate execution results
   ansible.builtin.set_fact:
