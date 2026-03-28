@@ -3,7 +3,7 @@
 # Results are automatically published to the AWX/Tower job Artifacts section
 # via ansible.builtin.set_stats (controlled by execution_result_set_stats_enabled).
 
-- name: Example play using execution_result role
+- name: Example play using execution_result role (Simplified Pattern)
   hosts: all
   gather_facts: true
 
@@ -11,7 +11,35 @@
     - role: some_other_role   # your primary role
 
   tasks:
-    - name: Perform a critical operation
+    - name: Perform a critical operation - Simplified Pattern
+      block:
+        - name: Run the primary task
+          ansible.builtin.command: /usr/bin/my_script.sh
+          register: primary_task_result
+
+      rescue:
+        - name: Record execution failure via execution_result role
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            # Simplified: Just pass the registered variable
+            execution_result_registered_var: "{{ primary_task_result }}"
+
+      always:
+        - name: Record execution success via execution_result role
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            # Simplified: Just pass the registered variable
+            execution_result_registered_var: "{{ primary_task_result }}"
+          when: primary_task_result.rc | default(0) == 0
+
+- name: Example play using execution_result role (Advanced Pattern)
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Perform a critical operation - Advanced Pattern
       block:
         - name: Run the primary task
           ansible.builtin.command: /usr/bin/my_script.sh

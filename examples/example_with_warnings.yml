@@ -3,7 +3,49 @@
 # This example shows how to properly capture task-level warnings
 # that appear during task execution (like Python interpreter warnings).
 
-- name: Example play capturing warnings
+- name: Example play capturing warnings (Simplified Pattern)
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    # Example 1: Capture warnings from a ping task using simplified pattern
+    - name: Ping the managed host
+      ansible.builtin.ping:
+      register: ping_result
+
+    - name: Record ping execution result with warnings (Simplified)
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        # Simplified: Just pass the registered variable
+        execution_result_registered_var: "{{ ping_result }}"
+
+    # Example 2: Using block/rescue to capture warnings on success or failure
+    - name: Run task that might generate warnings
+      block:
+        - name: Execute a command
+          ansible.builtin.shell: |
+            echo "Running task"
+            exit 0
+          register: task_result
+          changed_when: false
+
+      rescue:
+        - name: Record failure with warnings (Simplified)
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            execution_result_registered_var: "{{ task_result }}"
+
+      always:
+        - name: Record success with warnings (Simplified)
+          ansible.builtin.include_role:
+            name: execution_result
+          vars:
+            execution_result_registered_var: "{{ task_result }}"
+          when: task_result.rc | default(0) == 0
+
+- name: Example play capturing warnings (Advanced Pattern)
   hosts: all
   gather_facts: true
 

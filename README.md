@@ -32,25 +32,63 @@ ansible-role-execution-result/
 
 ## Input Variables
 
-These variables can be passed by the calling role or task. When not provided, the role uses fallback logic to populate values from Ansible magic variables:
+These variables can be passed by the calling role or task. 
+
+### Simplified Usage with Registered Variable (Recommended)
+
+For easier integration, pass the entire registered variable from your task to the role:
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `execution_result_registered_var` | no | `{}` | Registered variable from the previous task. The role will automatically extract all fields from this variable. |
+
+**Example:**
+```yaml
+- name: Run a task
+  ansible.builtin.command: /usr/bin/my_script.sh
+  register: task_result
+
+- name: Record execution result
+  ansible.builtin.include_role:
+    name: execution_result
+  vars:
+    execution_result_registered_var: "{{ task_result }}"
+```
+
+The role automatically extracts these fields from the registered variable:
+- `rc` → return_code
+- `msg` → message
+- `stdout` → stdout
+- `stderr` → stderr
+- `exception` → exception
+- `warnings` → warnings
+- `task` → failed_task
+- `action` → failed_task_module
+
+### Individual Field Variables (Alternative)
+
+You can also pass individual fields explicitly. When not provided, the role uses fallback logic to populate values:
+1. First checks `execution_result_registered_var` (if provided)
+2. Then checks Ansible magic variables (`ansible_failed_result`, `ansible_failed_task`)
+3. Finally defaults to empty string
 
 | Variable | Required | Default | Fallback Source | Description |
 |---|---|---|---|---|
-| `execution_result_return_code` | no | `""` | `ansible_failed_result.rc` | Return/exit code of the task being tracked |
-| `execution_result_message` | no | `""` | `ansible_failed_result.msg` | Human-readable outcome or error message |
-| `execution_result_stdout` | no | `""` | `ansible_failed_result.stdout` | Standard output from the task |
-| `execution_result_stderr` | no | `""` | `ansible_failed_result.stderr` | Standard error from the task |
-| `execution_result_exception` | no | `""` | `ansible_failed_result.exception` | Exception traceback if available |
-| `execution_result_failed_task` | no | `""` | `ansible_failed_task.name` | Name of the task that failed (for audit trail) |
-| `execution_result_failed_task_module` | no | `""` | `ansible_failed_task.action` | Module name of the failed task |
-| `execution_result_warnings` | no | `[]` | N/A | List of warnings returned by the task (from `task_result.warnings`) |
+| `execution_result_return_code` | no | `""` | `execution_result_registered_var.rc` → `ansible_failed_result.rc` | Return/exit code of the task being tracked |
+| `execution_result_message` | no | `""` | `execution_result_registered_var.msg` → `ansible_failed_result.msg` | Human-readable outcome or error message |
+| `execution_result_stdout` | no | `""` | `execution_result_registered_var.stdout` → `ansible_failed_result.stdout` | Standard output from the task |
+| `execution_result_stderr` | no | `""` | `execution_result_registered_var.stderr` → `ansible_failed_result.stderr` | Standard error from the task |
+| `execution_result_exception` | no | `""` | `execution_result_registered_var.exception` → `ansible_failed_result.exception` | Exception traceback if available |
+| `execution_result_failed_task` | no | `""` | `execution_result_registered_var.task` → `ansible_failed_task.name` | Name of the task that failed (for audit trail) |
+| `execution_result_failed_task_module` | no | `""` | `execution_result_registered_var.action` → `ansible_failed_task.action` | Module name of the failed task |
+| `execution_result_warnings` | no | `[]` | `execution_result_registered_var.warnings` | List of warnings returned by the task (from `task_result.warnings`) |
 | `execution_result_os_distribution` | no | `""` | `ansible_distribution` | Operating system distribution (e.g., Ubuntu, CentOS) |
 | `execution_result_os_version` | no | `""` | `ansible_distribution_version` | Operating system version (e.g., 20.04, 7.9) |
 | `execution_result_os_family` | no | `""` | `ansible_os_family` | Operating system family (e.g., Debian, RedHat) |
 | `execution_result_os_system` | no | `""` | `ansible_system` | System type (e.g., Linux, Windows) |
 | `execution_result_os_architecture` | no | `""` | `ansible_architecture` | System architecture (e.g., x86_64, aarch64) |
 
-**Best Practice:** Explicitly pass `execution_result_return_code` and `execution_result_message` from the calling task for accurate tracking. The fallback values from magic variables are only available in rescue blocks.
+**Note:** Individual variables take precedence over `execution_result_registered_var`. If you pass both, the individual field value will be used.
 
 ### AWX/Tower Metadata Capture
 
@@ -112,7 +150,88 @@ Override these in your playbook or inventory to control role behaviour:
 
 ## Usage
 
-### Basic block/rescue pattern
+### Simplified Pattern with Registered Variable (Recommended)
+
+The easiest way to use this role is to pass the entire registered variable from your task:
+
+```yaml
+- name: Perform a critical operation
+  block:
+    - name: Run the primary task
+      ansible.builtin.command: /usr/bin/my_script.sh
+      register: task_result
+
+  rescue:
+    - name: Record execution failure
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        execution_result_registered_var: "{{ task_result }}"
+
+  always:
+    - name: Record execution success
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        execution_result_registered_var: "{{ task_result }}"
+```
+
+The role will automatically extract all fields from the registered variable including return code, message, stdout, stderr, exception, and warnings.
+
+### Advanced Pattern with Individual Fields
+
+For more control, you can explicitly specify individual fields:
+
+```yaml
+- name: Perform a critical operation
+  block:
+    - name: Run the primary task
+      ansible.builtin.command: /usr/bin/my_script.sh
+      register: primary_task_result
+
+  rescue:
+    - name: Record execution failure
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        execution_result_return_code: "{{ primary_task_result.rc | default(1) }}"
+        execution_result_message: "{{ primary_task_result.stderr | default('Unknown error') }}"
+        execution_result_failed_task: "Run the primary task"
+        execution_result_warnings: "{{ primary_task_result.warnings | default([]) }}"
+        # Optional OS details (will only appear in results if provided)
+        execution_result_os_distribution: "{{ ansible_distribution | default('') }}"
+        execution_result_os_version: "{{ ansible_distribution_version | default('') }}"
+        execution_result_os_family: "{{ ansible_os_family | default('') }}"
+        execution_result_os_system: "{{ ansible_system | default('') }}"
+        execution_result_os_architecture: "{{ ansible_architecture | default('') }}"
+```
+
+### Using with Ping Results
+
+For ping or connectivity tests:
+
+```yaml
+- name: Test connectivity
+  block:
+    - name: Ping target host
+      ansible.builtin.ping:
+      register: ping_result
+
+    - name: Capture Execution Details (Success)
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        execution_result_registered_var: "{{ ping_result }}"
+
+  rescue:
+    - name: Capture Execution Details (Failure)
+      ansible.builtin.include_role:
+        name: execution_result
+      vars:
+        execution_result_registered_var: "{{ ping_result }}"
+```
+
+### Basic block/rescue pattern (Legacy)
 
 ```yaml
 - name: Perform a critical operation

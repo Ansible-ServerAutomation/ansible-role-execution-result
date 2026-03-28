@@ -39,6 +39,11 @@ An Ansible role that tracks task execution results from `block/rescue/always` se
 ### Required Inputs
 
 When calling this role:
+
+**Simplified Pattern (Recommended)**:
+- `execution_result_registered_var`: Dict (entire registered variable from previous task)
+
+**Advanced Pattern (Individual Fields)**:
 - `execution_result_return_code`: Integer (0 = success, non-zero = failure)
 - `execution_result_message`: String (human-readable outcome)
 
@@ -50,6 +55,12 @@ Optional but important:
 - `execution_result_os_family`: String (OS family, e.g., Debian, RedHat)
 - `execution_result_os_system`: String (System type, e.g., Linux, Windows)
 - `execution_result_os_architecture`: String (Architecture, e.g., x86_64)
+
+**Variable Priority Chain**:
+1. Explicit field variables (e.g., `execution_result_return_code`)
+2. Registered variable fields (e.g., `execution_result_registered_var.rc`)
+3. Magic variables (e.g., `ansible_failed_result.rc`)
+4. Empty string or appropriate default
 
 **AWX/Tower Metadata** (auto-captured using API-first approach):
 - **When running in AWX/Tower**: Automatically fetched from AWX API when `TOWER_JOB_ID` environment variable is detected
@@ -155,6 +166,23 @@ ansible-playbook examples/example_playbook.yml -i inventory.ini -e "execution_re
 
 This role is designed to be invoked from **other roles** in rescue/always blocks:
 
+**Simplified Pattern (Recommended):**
+```yaml
+block:
+  - name: Run a task
+    ansible.builtin.command: /usr/bin/my_script.sh
+    register: task_result
+
+rescue:
+  - name: Record execution failure
+    ansible.builtin.include_role:
+      name: execution_result
+    vars:
+      # Simplified: Just pass the registered variable
+      execution_result_registered_var: "{{ task_result }}"
+```
+
+**Advanced Pattern (Individual Fields):**
 ```yaml
 rescue:
   - name: Record execution failure

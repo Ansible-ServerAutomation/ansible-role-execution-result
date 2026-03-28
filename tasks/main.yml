@@ -4,13 +4,13 @@
   block:
     - name: Set input variables with fallback logic
       ansible.builtin.set_fact:
-        _execution_result_return_code_input: "{{ execution_result_return_code | default(ansible_failed_result.rc | default('')) }}"
-        _execution_result_message_input: "{{ execution_result_message | default(ansible_failed_result.msg | default('')) }}"
-        _execution_result_stdout_input: "{{ execution_result_stdout | default(ansible_failed_result.stdout | default('')) }}"
-        _execution_result_stderr_input: "{{ execution_result_stderr | default(ansible_failed_result.stderr | default('')) }}"
-        _execution_result_exception_input: "{{ execution_result_exception | default(ansible_failed_result.exception | default('')) }}"
-        _execution_result_failed_task_input: "{{ execution_result_failed_task | default(ansible_failed_task.name | default('')) }}"
-        _execution_result_failed_task_module_input: "{{ execution_result_failed_task_module | default(ansible_failed_task.action | default('')) }}"
+        _execution_result_return_code_input: "{{ execution_result_return_code if (execution_result_return_code | string | length > 0) else (execution_result_registered_var.rc | default(ansible_failed_result.rc | default(''))) }}"
+        _execution_result_message_input: "{{ execution_result_message if (execution_result_message | length > 0) else (execution_result_registered_var.msg | default(ansible_failed_result.msg | default(''))) }}"
+        _execution_result_stdout_input: "{{ execution_result_stdout if (execution_result_stdout | length > 0) else (execution_result_registered_var.stdout | default(ansible_failed_result.stdout | default(''))) }}"
+        _execution_result_stderr_input: "{{ execution_result_stderr if (execution_result_stderr | length > 0) else (execution_result_registered_var.stderr | default(ansible_failed_result.stderr | default(''))) }}"
+        _execution_result_exception_input: "{{ execution_result_exception if (execution_result_exception | length > 0) else (execution_result_registered_var.exception | default(ansible_failed_result.exception | default(''))) }}"
+        _execution_result_failed_task_input: "{{ execution_result_failed_task if (execution_result_failed_task | length > 0) else (execution_result_registered_var.task | default(ansible_failed_task.name | default(''))) }}"
+        _execution_result_failed_task_module_input: "{{ execution_result_failed_task_module if (execution_result_failed_task_module | length > 0) else (execution_result_registered_var.action | default(ansible_failed_task.action | default(''))) }}"
 
     - name: Determine result status
       ansible.builtin.set_fact:
@@ -26,7 +26,7 @@
         _execution_result_stderr: "{{ _execution_result_stderr_input | trim or '(none)' }}"
         _execution_result_message: "{{ _execution_result_message_input | trim or '(none)' }}"
         _execution_result_exception: "{{ _execution_result_exception_input | trim or '(none)' }}"
-        _execution_result_warnings: "{{ execution_result_warnings | default([]) }}"
+        _execution_result_warnings: "{{ execution_result_warnings if (execution_result_warnings | length > 0) else (execution_result_registered_var.warnings | default([])) }}"
         _execution_result_os_distribution: "{{ execution_result_os_distribution | default('') | trim }}"
         _execution_result_os_version: "{{ execution_result_os_version | default('') | trim }}"
         _execution_result_os_family: "{{ execution_result_os_family | default('') | trim }}"

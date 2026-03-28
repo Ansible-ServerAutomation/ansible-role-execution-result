@@ -48,7 +48,17 @@ Then when calling the execution_result role, pass the warnings:
     execution_result_message: "Task completed"
 ```
 
-### After:
+### After (Simplified Pattern - Recommended):
+```yaml
+- name: Capture Execution Details (Success)
+  ansible.builtin.include_role:
+    name: execution_result
+  vars:
+    # Simplified: Just pass the registered variable
+    execution_result_registered_var: "{{ ping_task_result }}"
+```
+
+### After (Advanced Pattern):
 ```yaml
 - name: Capture Execution Details (Success)
   ansible.builtin.include_role:

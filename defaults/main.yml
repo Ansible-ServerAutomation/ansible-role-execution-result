@@ -1,6 +1,14 @@
 ---
+# Registered variable from previous task (optional)
+# When provided, the role automatically extracts all fields from this variable
+# Example: execution_result_registered_var: "{{ ping_result }}"
+execution_result_registered_var: {}
+
 # Default input variables (expected to be overridden by the caller)
-# When not provided by caller, fallback logic in tasks uses ansible_failed_result/ansible_failed_task magic variables
+# When not provided by caller, fallback logic in tasks uses:
+# 1. execution_result_registered_var fields (if provided)
+# 2. ansible_failed_result/ansible_failed_task magic variables
+# 3. Empty string
 execution_result_return_code: ""
 execution_result_stdout: ""
 execution_result_stderr: ""
