@@ -63,12 +63,12 @@ Optional but important:
 4. Empty string or appropriate default
 
 **AWX/Tower Metadata** (auto-captured using API-first approach):
-- **When running in AWX/Tower**: Automatically fetched from AWX API when `TOWER_JOB_ID` environment variable is detected
+- **When AWX API access is available**: Automatically fetched from the AWX API when host and OAuth token credentials are detected
 - **Priority chain**: API-fetched values → Environment variables → 'N/A'
 - **Fields captured**: `project`, `organization`, `scm_url`, `scm_revision`, `scm_branch`, `execution_environment`, `job_template`, `playbook`
 
 **AWX API Configuration** (auto-detected from environment):
-- `execution_result_use_awx_api`: Auto-enabled when `TOWER_JOB_ID` exists
+- `execution_result_use_awx_api`: Auto-enabled when AWX/Tower API credentials exist (`TOWER_HOST`/`AWX_HOST` and `TOWER_OAUTH_TOKEN`/`AWX_OAUTH_TOKEN`)
 - `execution_result_awx_api_url`: Auto-detected from `TOWER_HOST` or `AWX_HOST`
 - `execution_result_awx_token`: Auto-detected from `TOWER_OAUTH_TOKEN` or `AWX_OAUTH_TOKEN`
 - `execution_result_awx_job_id`: Auto-detected from `TOWER_JOB_ID` or `AWX_JOB_ID`
