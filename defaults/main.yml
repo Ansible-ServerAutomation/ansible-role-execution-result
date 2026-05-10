@@ -36,8 +36,8 @@ execution_result_awx_token: "{{ lookup('env', 'TOWER_OAUTH_TOKEN') or lookup('en
 execution_result_awx_job_id: "{{ lookup('env', 'TOWER_JOB_ID') or lookup('env', 'AWX_JOB_ID') or lookup('env', 'CONTROLLER_JOB_ID') or lookup('env', 'WORKFLOW_JOB_ID') or lookup('env', 'JOB_ID') or '' }}"
 # Manual job ID override (set via extra_vars when auto-detection fails)
 execution_result_awx_job_id_override: ""
-# Validate SSL certificates when connecting to AWX API
-execution_result_awx_validate_certs: false
+# Validate SSL certificates when connecting to AWX API (disable explicitly only for local/self-signed testing)
+execution_result_awx_validate_certs: true
 
 
 # Result aggregation
