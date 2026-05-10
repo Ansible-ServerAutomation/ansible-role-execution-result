@@ -1,128 +1,205 @@
 ---
-- name: Validate required input variables
-  ansible.builtin.assert:
-    that:
-      - execution_result_return_code is defined
-      - execution_result_message is defined
-    fail_msg: >-
-      execution_result role requires 'execution_result_return_code' and
-      'execution_result_message' to be defined by the caller.
-    success_msg: "Required variables are present."
+- name: Execute all tasks on localhost
+  delegate_to: localhost
+  block:
+    - name: Set input variables with fallback logic
+      ansible.builtin.set_fact:
+        _execution_result_return_code_input: "{{ execution_result_return_code if (execution_result_return_code | string | length > 0) else (execution_result_registered_var.rc | default(ansible_failed_result.rc | default(''))) }}"
+        _execution_result_message_input: "{{ execution_result_message if (execution_result_message | length > 0) else (execution_result_registered_var.msg | default(ansible_failed_result.msg | default(''))) }}"
+        _execution_result_stdout_input: "{{ execution_result_stdout if (execution_result_stdout | length > 0) else (execution_result_registered_var.stdout | default(ansible_failed_result.stdout | default(''))) }}"
+        _execution_result_stderr_input: "{{ execution_result_stderr if (execution_result_stderr | length > 0) else (execution_result_registered_var.stderr | default(ansible_failed_result.stderr | default(''))) }}"
+        _execution_result_exception_input: "{{ execution_result_exception if (execution_result_exception | length > 0) else (execution_result_registered_var.exception | default(ansible_failed_result.exception | default(''))) }}"
+        _execution_result_failed_task_input: "{{ execution_result_failed_task if (execution_result_failed_task | length > 0) else (execution_result_registered_var.task | default(ansible_failed_task.name | default(''))) }}"
+        _execution_result_failed_task_module_input: "{{ execution_result_failed_task_module if (execution_result_failed_task_module | length > 0) else (execution_result_registered_var.action | default(ansible_failed_task.action | default(''))) }}"
 
-- name: Determine result status
-  ansible.builtin.set_fact:
-    _execution_result_status: "{{ 'SUCCESS' if (execution_result_return_code | int) == 0 else 'FAILURE' }}"
+    - name: Determine result status
+      ansible.builtin.set_fact:
+        _execution_result_status: "{{ 'SUCCESS' if (_execution_result_return_code_input | int) == 0 else 'FAILURE' }}"
 
-- name: Capture current timestamp
-  ansible.builtin.set_fact:
-    _execution_result_timestamp: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
+    - name: Capture current timestamp
+      ansible.builtin.set_fact:
+        _execution_result_timestamp: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
 
-- name: Normalise and format result fields
-  ansible.builtin.set_fact:
-    _execution_result_stdout: "{{ execution_result_stdout | default('') | trim or '(none)' }}"
-    _execution_result_stderr: "{{ execution_result_stderr | default('') | trim or '(none)' }}"
-    _execution_result_message: "{{ execution_result_message | default('') | trim or '(none)' }}"
-    _execution_result_exception: "{{ execution_result_exception | default('') | trim or '(none)' }}"
+    - name: Normalise and format result fields
+      ansible.builtin.set_fact:
+        _execution_result_stdout: "{{ _execution_result_stdout_input | trim or '(none)' }}"
+        _execution_result_stderr: "{{ _execution_result_stderr_input | trim or '(none)' }}"
+        _execution_result_message: "{{ _execution_result_message_input | trim or '(none)' }}"
+        _execution_result_exception: "{{ _execution_result_exception_input | trim or '(none)' }}"
+        _execution_result_warnings: "{{ execution_result_warnings if (execution_result_warnings | length > 0) else (execution_result_registered_var.warnings | default([])) }}"
+        _execution_result_os_distribution: "{{ execution_result_os_distribution | default('') | trim }}"
+        _execution_result_os_version: "{{ execution_result_os_version | default('') | trim }}"
+        _execution_result_os_family: "{{ execution_result_os_family | default('') | trim }}"
+        _execution_result_os_system: "{{ execution_result_os_system | default('') | trim }}"
+        _execution_result_os_architecture: "{{ execution_result_os_architecture | default('') | trim }}"
 
-- name: Build result entry
-  ansible.builtin.set_fact:
-    _execution_result_entry:
-      timestamp: "{{ _execution_result_timestamp }}"
-      host: "{{ inventory_hostname }}"
-      status: "{{ _execution_result_status }}"
-      return_code: "{{ execution_result_return_code | int }}"
-      stdout: "{{ _execution_result_stdout }}"
-      stderr: "{{ _execution_result_stderr }}"
-      message: "{{ _execution_result_message }}"
-      exception: "{{ _execution_result_exception }}"
-      failed_task: "{{ execution_result_failed_task | default('') | trim or 'N/A' }}"
+    - name: Determine AWX job ID for API fetch
+      ansible.builtin.set_fact:
+        _execution_result_job_id: "{{ execution_result_awx_job_id_override or execution_result_awx_job_id }}"
+      when:
+        - execution_result_use_awx_api | bool
+        - execution_result_awx_api_url | trim | length > 0
+        - execution_result_awx_token | trim | length > 0
 
-- name: Accumulate execution results
-  ansible.builtin.set_fact:
-    "{{ execution_result_results_fact }}": >-
-      {{
-        (vars[execution_result_results_fact] | default([])) + [_execution_result_entry]
-      }}
-  when: execution_result_accumulate | bool
+    - name: Fetch job details from AWX/Tower API using OAuth Bearer token
+      ansible.builtin.uri:
+        url: "{{ execution_result_awx_api_url | regex_replace('/$', '') }}/api/v2/jobs/{{ _execution_result_job_id }}/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ execution_result_awx_token }}"
+          Content-Type: "application/json"
+        validate_certs: "{{ execution_result_awx_validate_certs | bool }}"
+        status_code: 200
+        return_content: true
+      register: _execution_result_awx_job_data
+      run_once: true
+      ignore_errors: true
+      when:
+        - execution_result_use_awx_api | bool
+        - execution_result_awx_api_url | trim | length > 0
+        - execution_result_awx_token | trim | length > 0
+        - _execution_result_job_id | default('') | trim | length > 0
 
-- name: Publish execution result to AWX/Tower job artifacts
-  ansible.builtin.set_stats:
-    data: >-
-      {{
-        {'execution_result_last': _execution_result_entry}
-        | combine(
-            {execution_result_results_fact: vars[execution_result_results_fact] | default([])}
-            if execution_result_accumulate | bool else {}
-          )
-      }}
-    aggregate: true
-    per_host: "{{ execution_result_set_stats_per_host | bool }}"
-  when: execution_result_set_stats_enabled | bool
+    - name: Fetch project details to get SCM branch and URL
+      ansible.builtin.uri:
+        url: "{{ execution_result_awx_api_url | regex_replace('/$', '') }}/api/v2/projects/{{ _execution_result_awx_job_data.json.summary_fields.project.id }}/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ execution_result_awx_token }}"
+          Content-Type: "application/json"
+        validate_certs: "{{ execution_result_awx_validate_certs | bool }}"
+        status_code: 200
+        return_content: true
+      register: _execution_result_awx_project_data
+      run_once: true
+      ignore_errors: true
+      when:
+        - execution_result_use_awx_api | bool
+        - _execution_result_awx_job_data is defined
+        - _execution_result_awx_job_data is not skipped
+        - _execution_result_awx_job_data.status is defined
+        - _execution_result_awx_job_data.status == 200
+        - _execution_result_awx_job_data.json is defined
+        - _execution_result_awx_job_data.json.summary_fields.project.id is defined
 
-- name: Ensure log directory exists (Linux)
-  ansible.builtin.file:
-    path: "{{ execution_result_log_dir }}"
-    state: directory
-    mode: "0755"
-  when:
-    - execution_result_log_enabled | bool
-    - ansible_os_family != 'Windows'
+    - name: Parse AWX API response and store metadata
+      ansible.builtin.set_fact:
+        _execution_result_api_project: "{{ _execution_result_awx_job_data.json.summary_fields.project.name | default('') }}"
+        _execution_result_api_organization: "{{ _execution_result_awx_job_data.json.summary_fields.organization.name | default('') }}"
+        _execution_result_api_job_template: "{{ _execution_result_awx_job_data.json.summary_fields.job_template.name | default('') }}"
+        _execution_result_api_playbook: "{{ _execution_result_awx_job_data.json.playbook | default('') }}"
+        _execution_result_api_scm_branch: "{{ _execution_result_awx_job_data.json.scm_branch | default('') or (_execution_result_awx_project_data.json.scm_branch | default('') if _execution_result_awx_project_data is defined and _execution_result_awx_project_data.status | default(0) == 200 else '') }}"
+        _execution_result_api_scm_revision: "{{ _execution_result_awx_job_data.json.scm_revision | default('') }}"
+        _execution_result_api_scm_url: "{{ _execution_result_awx_project_data.json.scm_url | default('') if _execution_result_awx_project_data is defined and _execution_result_awx_project_data.status | default(0) == 200 else '' }}"
+        _execution_result_api_execution_environment: "{{ _execution_result_awx_job_data.json.summary_fields.execution_environment.name | default('') }}"
+      when:
+        - execution_result_use_awx_api | bool
+        - _execution_result_awx_job_data is defined
+        - _execution_result_awx_job_data is not skipped
+        - _execution_result_awx_job_data.status is defined
+        - _execution_result_awx_job_data.status == 200
+        - _execution_result_awx_job_data.json is defined
 
-- name: Ensure log directory exists (Windows)
-  ansible.windows.win_file:
-    path: "{{ execution_result_log_dir }}"
-    state: directory
-  when:
-    - execution_result_log_enabled | bool
-    - ansible_os_family == 'Windows'
+    - name: Build result entry
+      ansible.builtin.set_fact:
+        _execution_result_entry:
+          timestamp: "{{ _execution_result_timestamp }}"
+          project: "{{ (_execution_result_api_project | default('') | trim) or (lookup('env', 'AWX_PROJECT_NAME') | trim) or (lookup('env', 'TOWER_PROJECT_NAME') | trim) or 'N/A' }}"
+          organization: "{{ (_execution_result_api_organization | default('') | trim) or (lookup('env', 'TOWER_ORGANIZATION') | trim) or 'N/A' }}"
+          scm_revision: "{{ (_execution_result_api_scm_revision | default('') | trim) or (lookup('env', 'AWX_PROJECT_REVISION') | trim) or 'N/A' }}"
+          scm_branch: "{{ (_execution_result_api_scm_branch | default('') | trim) or (lookup('env', 'AWX_PROJECT_SCM_BRANCH') | trim) or 'N/A' }}"
+          scm_url: "{{ (_execution_result_api_scm_url | default('') | trim) or 'N/A' }}"
+          execution_environment: "{{ (_execution_result_api_execution_environment | default('') | trim) or (lookup('env', 'AWX_EXECUTION_ENVIRONMENT') | trim) or 'N/A' }}"
+          job_template: "{{ (_execution_result_api_job_template | default('') | trim) or (lookup('env', 'AWX_JOB_TEMPLATE_NAME') | trim) or (lookup('env', 'TOWER_JOB_TEMPLATE_NAME') | trim) or 'N/A' }}"
+          playbook: "{{ (_execution_result_api_playbook | default('') | trim) or 'N/A' }}"
+          status: "{{ _execution_result_status }}"
+          return_code: "{{ _execution_result_return_code_input | int }}"
+          stdout: "{{ _execution_result_stdout }}"
+          stderr: "{{ _execution_result_stderr }}"
+          message: "{{ _execution_result_message }}"
+          exception: "{{ _execution_result_exception }}"
+          warnings: "{{ _execution_result_warnings }}"
+          failed_task: "{{ _execution_result_failed_task_input | trim or 'N/A' }}"
+          failed_task_module: "{{ _execution_result_failed_task_module_input | trim or 'N/A' }}"
+          os_distribution: "{{ _execution_result_os_distribution or 'N/A' }}"
+          os_version: "{{ _execution_result_os_version or 'N/A' }}"
+          os_family: "{{ _execution_result_os_family or 'N/A' }}"
+          os_system: "{{ _execution_result_os_system or 'N/A' }}"
+          os_architecture: "{{ _execution_result_os_architecture or 'N/A' }}"
 
-- name: Write execution result to log file (Linux)
-  ansible.builtin.lineinfile:
-    path: "{{ execution_result_log_file }}"
-    line: "{{ lookup('template', 'execution_result_entry.j2') | trim }}"
-    create: true
-    mode: "0644"
-  when:
-    - execution_result_log_enabled | bool
-    - ansible_os_family != 'Windows'
+    - name: Accumulate execution results
+      ansible.builtin.set_fact:
+        "{{ execution_result_results_fact }}": >-
+          {{
+            (vars[execution_result_results_fact] | default([])) + [_execution_result_entry]
+          }}
+      when: execution_result_accumulate | bool
 
-- name: Write execution result to log file (Windows)
-  ansible.windows.win_lineinfile:
-    path: "{{ execution_result_log_file }}"
-    line: "{{ lookup('template', 'execution_result_entry.j2') | trim }}"
-    create: true
-  when:
-    - execution_result_log_enabled | bool
-    - ansible_os_family == 'Windows'
+    - name: Publish execution result to AWX/Tower job artifacts
+      ansible.builtin.set_stats:
+        data:
+          "{{ execution_result_results_fact }}": >-
+            {{
+              vars[execution_result_results_fact] | default([_execution_result_entry])
+              if execution_result_accumulate | bool
+              else [_execution_result_entry]
+            }}
+        aggregate: true
+        per_host: "{{ execution_result_set_stats_per_host | bool }}"
+      when: execution_result_set_stats_enabled | bool
 
-- name: Emit execution result as debug output
-  ansible.builtin.debug:
-    msg: |
-      ┌─────────────────────────────────────────────────────┐
-      │                   EXECUTION RESULT                  │
-      ├─────────────────────────────────────────────────────┤
-      │ Host        : {{ _execution_result_entry.host }}
-      │ Timestamp   : {{ _execution_result_entry.timestamp }}
-      │ Status      : {{ _execution_result_entry.status }}
-      │ Return Code : {{ _execution_result_entry.return_code }}
-      │ Failed Task : {{ _execution_result_entry.failed_task }}
-      ├──────────────────────── Output ─────────────────────┤
-      │ Message     :
-      │   {{ _execution_result_entry.message | indent(4) }}
-      │ Stdout      :
-      │   {{ _execution_result_entry.stdout | indent(4) }}
-      │ Stderr      :
-      │   {{ _execution_result_entry.stderr | indent(4) }}
-      │ Exception   :
-      │   {{ _execution_result_entry.exception | indent(4) }}
-      └─────────────────────────────────────────────────────┘
+    - name: Emit execution result as debug output
+      ansible.builtin.debug:
+        msg: |
+          ┌─────────────────────────────────────────────────────────────┐
+          │                      EXECUTION RESULT                       │
+          ├─────────────────────────────────────────────────────────────┤
+          │ Project         : {{ _execution_result_entry.project }}
+          │ Organization    : {{ _execution_result_entry.organization }}
+          │ Job Template    : {{ _execution_result_entry.job_template }}
+          │ Playbook        : {{ _execution_result_entry.playbook }}
+          ├─────────────────────────────────────────────────────────────┤
+          │ SCM URL         : {{ _execution_result_entry.scm_url }}
+          │ SCM Branch      : {{ _execution_result_entry.scm_branch }}
+          │ SCM Revision    : {{ _execution_result_entry.scm_revision[:12] if _execution_result_entry.scm_revision != 'N/A' else 'N/A' }}
+          │ Exec Environment: {{ _execution_result_entry.execution_environment }}
+          ├─────────────────────────────────────────────────────────────┤
+          │ Timestamp       : {{ _execution_result_entry.timestamp }}
+          │ Status          : {{ _execution_result_entry.status }}
+          │ Return Code     : {{ _execution_result_entry.return_code }}
+          │ Failed Task     : {{ _execution_result_entry.failed_task }}
+          │ Task Module     : {{ _execution_result_entry.failed_task_module }}
+          {% if _execution_result_entry.os_distribution != 'N/A' or _execution_result_entry.os_version != 'N/A' or _execution_result_entry.os_family != 'N/A' or _execution_result_entry.os_system != 'N/A' or _execution_result_entry.os_architecture != 'N/A' %}
+          ├─────────────────────────────────────────────────────────────┤
+          │ Operating System: {{ _execution_result_entry.os_distribution }}
+          │ OS Version      : {{ _execution_result_entry.os_version }}
+          │ OS Family       : {{ _execution_result_entry.os_family }}
+          │ System          : {{ _execution_result_entry.os_system }}
+          │ Architecture    : {{ _execution_result_entry.os_architecture }}
+          {% endif %}
+          ├──────────────────────── Output ─────────────────────────────┤
+          │ Message     :
+          │   {{ _execution_result_entry.message | indent(4) }}
+          │ Stdout      :
+          │   {{ _execution_result_entry.stdout | indent(4) }}
+          │ Stderr      :
+          │   {{ _execution_result_entry.stderr | indent(4) }}
+          │ Exception   :
+          │   {{ _execution_result_entry.exception | indent(4) }}
+          {% if _execution_result_entry.warnings | length > 0 %}
+          │ Warnings    :
+          {% for warning in _execution_result_entry.warnings %}
+          │   [{{ loop.index }}] {{ warning }}
+          {% endfor %}
+          {% endif %}
+          └─────────────────────────────────────────────────────┘
 
-- name: Fail the play when return_code is non-zero and fail_on_error is enabled
-  ansible.builtin.fail:
-    msg: >-
-      Execution result role triggered a play failure.
-      Task '{{ execution_result_failed_task | default('unknown') }}' reported
-      return code {{ execution_result_return_code }}: {{ execution_result_message }}
-  when:
-    - execution_result_fail_on_error | bool
-    - (execution_result_return_code | int) != 0
+    - name: Fail the play when return_code is non-zero and fail_on_error is enabled
+      ansible.builtin.fail:
+        msg: >-
+          Execution result role triggered a play failure.
+          Task '{{ _execution_result_failed_task_input | default('N/A') }}' reported
+          return code {{ _execution_result_return_code_input }}: {{ _execution_result_message_input }}
+      when:
+        - execution_result_fail_on_error | bool
+        - (_execution_result_return_code_input | int) != 0

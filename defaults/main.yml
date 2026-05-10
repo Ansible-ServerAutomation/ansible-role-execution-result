@@ -1,29 +1,50 @@
 ---
+# Registered variable from previous task (optional)
+# When provided, the role automatically extracts all fields from this variable
+# Example: execution_result_registered_var: "{{ ping_result }}"
+execution_result_registered_var: {}
+
 # Default input variables (expected to be overridden by the caller)
-execution_result_return_code: 0
+# When not provided by caller, fallback logic in tasks uses:
+# 1. execution_result_registered_var fields (if provided)
+# 2. ansible_failed_result/ansible_failed_task magic variables
+# 3. Empty string
+execution_result_return_code: ""
 execution_result_stdout: ""
 execution_result_stderr: ""
 execution_result_message: ""
 execution_result_exception: ""
 execution_result_failed_task: ""
+execution_result_failed_task_module: ""
+execution_result_warnings: []
 
-# Logging configuration
-execution_result_log_enabled: false
-execution_result_log_file: >-
-  {{ (ansible_os_family == 'Windows')
-     | ternary('C:\\ProgramData\\Ansible\\ansible_execution_results.log',
-               '/var/log/ansible_execution_results.log') }}
-execution_result_log_dir: >-
-  {{ (ansible_os_family == 'Windows')
-     | ternary('C:\\ProgramData\\Ansible',
-               '/var/log') }}
+# OS details (optional - only included if supplied)
+execution_result_os_distribution: "{{ ansible_distribution | default('') }}"
+execution_result_os_version: "{{ ansible_distribution_version | default('') }}"
+execution_result_os_family: "{{ ansible_os_family | default('') }}"
+execution_result_os_system: "{{ ansible_system | default('') }}"
+execution_result_os_architecture: "{{ ansible_architecture | default('') }}"
+
+# AWX/Tower API configuration (automatically fetches metadata from AWX/Tower API)
+# Auto-enable API mode when credentials are available (even if job ID not auto-detected)
+execution_result_use_awx_api: "{{ ((lookup('env', 'TOWER_HOST') or lookup('env', 'CONTROLLER_HOST')) and (lookup('env', 'TOWER_OAUTH_TOKEN') or lookup('env', 'CONTROLLER_OAUTH_TOKEN'))) | length > 0 }}"
+# AWX/Tower API base URL (auto-detected from TOWER_HOST credential env var, override if needed)
+execution_result_awx_api_url: "{{ lookup('env', 'TOWER_HOST') or lookup('env', 'CONTROLLER_HOST') or lookup('env', 'AWX_HOST') or '' }}"
+# OAuth Bearer token for AWX API authentication (auto-detected from TOWER_OAUTH_TOKEN credential env var)
+execution_result_awx_token: "{{ lookup('env', 'TOWER_OAUTH_TOKEN') or lookup('env', 'CONTROLLER_OAUTH_TOKEN') or lookup('env', 'AWX_OAUTH_TOKEN') or '' }}"
+# Job ID to fetch details for (auto-detected, checks workflow jobs too, or provide manually via extra_vars)
+execution_result_awx_job_id: "{{ lookup('env', 'TOWER_JOB_ID') or lookup('env', 'AWX_JOB_ID') or lookup('env', 'CONTROLLER_JOB_ID') or lookup('env', 'WORKFLOW_JOB_ID') or lookup('env', 'JOB_ID') or '' }}"
+# Manual job ID override (set via extra_vars when auto-detection fails)
+execution_result_awx_job_id_override: ""
+# Validate SSL certificates when connecting to AWX API (disable explicitly only for local/self-signed testing)
+execution_result_awx_validate_certs: true
+
 
 # Result aggregation
+# When true: builds a list of results across multiple role invocations (useful for tracking multiple tasks)
+# When false: only the current result is published to artifacts (prevents duplicates if called multiple times)
 execution_result_accumulate: true
 execution_result_results_fact: "execution_results"
-
-# Timestamp format used in log entries
-execution_result_timestamp_format: "%Y-%m-%d %H:%M:%S"
 
 # Exit behaviour: when true, the role will fail the play if return_code != 0
 execution_result_fail_on_error: false
