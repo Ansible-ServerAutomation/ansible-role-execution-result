@@ -103,7 +103,7 @@ Default behavior ([defaults/main.yml](../defaults/main.yml)):
 ### When Modifying Tasks
 
 1. **Maintain delegation**: All tasks must run on localhost via `delegate_to: localhost` to access AWX credentials
-2. **Follow normalization pattern**: All empty/null fields render as `(none)` for consistent output
+2. **Follow normalization pattern**: Empty/null fields do not all use the same sentinel; preserve the existing field-specific output conventions (`(none)` for some fields, `N/A` for many project/SCM/OS fields) unless intentionally standardizing them across the role
 3. **API error handling**: Use `ignore_errors: true` with conditionals for optional API calls
 4. **Rely on defaults**: Variables have intelligent defaults with fallback chains; no explicit validation needed
 
