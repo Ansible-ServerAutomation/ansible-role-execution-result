@@ -338,7 +338,7 @@ These play-level warnings are emitted by Ansible core and are not part of task r
 ## Requirements
 
 - Ansible >= 2.12
-- `gather_facts: true` must be enabled (the role uses `ansible_date_time`)
+- `gather_facts: true` is recommended so the role can use `ansible_date_time`; if facts are not gathered, the role falls back to a UTC `date` lookup
 - For AWX/Tower metadata capture: "Red Hat Ansible Automation Platform" credential attached to job template
 
 ---
