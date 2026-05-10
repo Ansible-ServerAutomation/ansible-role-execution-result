@@ -92,19 +92,19 @@ You can also pass individual fields explicitly. When not provided, the role uses
 
 ### AWX/Tower Metadata Capture
 
-The role automatically captures **AWX/Tower metadata** (project, organization, job template, SCM details, execution environment) using an **API-first approach**:
+The role captures **AWX/Tower metadata** (project, organization, job template, SCM details, execution environment) using an **API-first approach when AWX/Tower API configuration is available**:
 
 **When running in AWX/Tower:**
-- Automatically enabled when `TOWER_JOB_ID` environment variable is detected
-- Fetches metadata from AWX/Tower REST API using OAuth Bearer token authentication
-- Falls back to environment variables if API fetch fails
+- If AWX/Tower API credentials/configuration are available, the role attempts to fetch metadata from the AWX/Tower REST API using OAuth Bearer token authentication
+- `TOWER_JOB_ID` is used to identify the current job context for API lookups
+- Falls back to environment variables if API configuration is unavailable or the API fetch fails
 
 **When running locally/CI/CD:**
 - Provide API configuration via extra variables or credentials
 - Role will attempt API fetch if credentials are available
 
 **Priority Order for AWX Metadata Fields:**
-1. **API-fetched values** (primary source when `TOWER_JOB_ID` exists)
+1. **API-fetched values** (primary source when API mode is enabled and configured)
 2. **Environment variables** (fallback: `AWX_PROJECT_NAME`, `TOWER_ORGANIZATION`, etc.)
 3. **'N/A'** (if neither API nor env vars available)
 
